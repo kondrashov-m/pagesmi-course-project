@@ -53,3 +53,10 @@ npm install
 
 # Запуск в режиме разработки
 npm run dev
+```
+##
+<div align="center">
+  <a href="https://kondrashov-m.ru" target="_blank">
+    <img width="148" height="34" alt="logo" src="https://github.com/user-attachments/assets/09168463-1da3-49db-b860-1bb5a8b6ad6a" />
+  </a>
+</div>
