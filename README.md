@@ -2,14 +2,13 @@
 
 **PagesMi** — это современный WYSIWYG-редактор для создания персональных сайтов без навыков программирования. Проект разработан в рамках курсовой работы по дисциплине "Технологии прикладного программирования".
 
-![React](https://img.shields.io/badge/React-18.2.0-blue)
+![React](https://img.shields.io/badge/React-18.2.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15.2.3-black)
+![Next.js](https://img.shields.io/badge/Next.js-15.2.3-white)
 ![Status](https://img.shields.io/badge/Status-✅%20Завершен-success)
-![License](https://img.shields.io/badge/License-MIT-green)
 
 <a href="https://github.com/kondrashov-m/pagesmi-course-project/blob/main/Курсовой_Проект_Кондрашов_М_И_241_335.pdf" target="_blank">
-  <img src="https://img.shields.io/badge/📚-Ознакомиться_с_работой-8A2BE2" alt="Ознакомиться с курсовой работой" height="30">
+  <img src="https://img.shields.io/badge/📚-Ознакомиться_с_работой-8A2BE2" alt="Ознакомиться с курсовой работой" height="300">
 </a>
 
 ## ✨ Возможности
