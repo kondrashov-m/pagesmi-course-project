@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  :root {
+    /* Dark Theme (Default) */
+    --background: 220 15% 12%; /* Very dark cool gray-blue */
+    --foreground: 210 30% 90%; /* Light cool gray-blue for text */
+
+    --card: 220 15% 15%; /* Slightly lighter than dark background */
+    --card-foreground: var(--foreground);
+
+    --popover: 220 15% 14%; /* Darker popover */
+    --popover-foreground: var(--foreground);
+
+    --primary: 210 70% 65%; /* Brighter blue for dark mode */
+    --primary-foreground: 220 15% 10%; /* Very dark blue for contrast on primary */
+
+    --secondary: 220 15% 22%; /* Muted dark gray-blue */
+    --secondary-foreground: 210 30% 80%;
+
+    --muted: 220 15% 25%;
+    --muted-foreground: 210 25% 65%;
+
+    --accent: 190 60% 60%; /* Brighter teal/cyan for dark mode */
+    --accent-foreground: 220 15% 10%; 
+
+    --destructive: 0 65% 55%; /* Darker red, slightly brighter for dark mode */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 28%;
+    --input: 220 15% 18%;
+    --ring: var(--primary);
+
+    --chart-1: 210 70% 60%;
+    --chart-2: 190 60% 55%;
+    --chart-3: 220 50% 65%;
+    --chart-4: 200 65% 70%;
+    --chart-5: 230 60% 75%;
+    
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 15% 14%; /* Slightly different dark bg for sidebar */
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

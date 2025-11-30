@@ -1,0 +1,20 @@
+[
+  {
+    "id": "user-1-id-sample",
+    "email": "test1@example.com",
+    "displayName": "Тестовый Пользователь 1",
+    "password": "password123"
+  },
+  {
+    "id": "user-2-id-sample",
+    "email": "another@example.com",
+    "displayName": "Другой Тестер",
+    "password": "password456"
+  },
+  {
+    "id": "user-3-id-sample",
+    "email": "dev@example.dev",
+    "displayName": "Разработчик",
+    "password": "devpassword"
+  }
+]

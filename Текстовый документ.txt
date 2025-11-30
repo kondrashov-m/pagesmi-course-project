@@ -1,0 +1,439 @@
+
+"use client";
+import type { CanvasElement, ElementType } from "@/types/canvas-element"; // Ensure ElementType is imported
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { LayoutDashboard, Trash2, Edit3, ArrowUp, ArrowDown, ImageUp, Copy } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { useState, type ChangeEvent, type KeyboardEvent, type CSSProperties, useMemo, useCallback, useRef } from "react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+
+interface VisualEditorCanvasProps {
+  elements: CanvasElement[];
+  onRemoveElement: (id: string) => void;
+  onUpdateElement: (element: CanvasElement) => void;
+  selectedElementId: string | null;
+  onSelectElement: (id: string | null) => void;
+  onUpdateElementContent: (id: string, content: string) => void;
+  onUpdateElementStyle: (id: string, newStyles: React.CSSProperties) => void;
+  onMoveElement: (id: string, direction: "up" | "down") => void;
+  onEditImage: (element: CanvasElement) => void;
+  onCopyElement: (id: string) => void;
+  canvasStyles: CSSProperties;
+  showGrid: boolean;
+  gridSize: string;
+}
+
+const MODULE_DEFAULT_CANVAS_STYLES: CSSProperties = {
+  backgroundColor: 'hsl(var(--card))',
+  padding: '20px',
+  width: '100%',
+  position: 'relative',
+  margin: '0 auto',
+};
+
+// This component will render a single element and its children recursively
+const RenderedCanvasElement: React.FC<VisualEditorCanvasProps & { element: CanvasElement; parentId?: string | null }> = ({
+  element: currentElement, // Renamed for clarity within this component
+  elements: allPageElements,
+  onRemoveElement,
+  onUpdateElement,
+  selectedElementId,
+  onSelectElement,
+  onUpdateElementContent,
+  onUpdateElementStyle,
+  onMoveElement,
+  onEditImage,
+  onCopyElement,
+}) => {
+  const [editingElementId, setEditingElementId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>("");
+  const { toast } = useToast();
+  const activeStyleTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleEditClick = (e: React.MouseEvent, el: CanvasElement) => {
+    e.stopPropagation();
+    if (el.type === "Image") {
+      onEditImage(el);
+      return;
+    }
+    if (el.type === "Container" && el.props?.['data-layout-type'] && el.children && el.children.length > 0) {
+      onSelectElement(el.id);
+      return;
+    }
+    setEditingElementId(el.id);
+    setEditText(el.content || "");
+    onSelectElement(el.id);
+  };
+
+  const handleSaveEdit = (e: React.MouseEvent, elementId: string) => {
+    e.stopPropagation();
+    onUpdateElementContent(elementId, editText);
+    setEditingElementId(null);
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingElementId(null);
+    setEditText("");
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEditText(e.target.value);
+  };
+
+  const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, elementId: string) => {
+    if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement && e.shiftKey) ) {
+      e.preventDefault();
+      e.stopPropagation();
+      onUpdateElementContent(elementId, editText);
+      setEditingElementId(null);
+    }
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setEditingElementId(null);
+      setEditText("");
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>, elementId: string) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.element-controls') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        (target.closest('button') && !target.classList.contains('canvas-element-button'))) {
+      return;
+    }
+    if (editingElementId && editingElementId !== elementId) {
+      setEditingElementId(null);
+      setEditText("");
+    }
+    onSelectElement(elementId);
+    e.stopPropagation(); // Stop event from bubbling to parent elements
+  };
+
+  const renderInnerContent = (el: CanvasElement) => {
+    const commonStyles = { ...el.styles } as CSSProperties;
+
+    if (el.type === "Header") {
+      return <header style={commonStyles} dangerouslySetInnerHTML={{ __html: el.content || "" }} />;
+    }
+    if (el.type === "Footer") {
+      return <footer style={commonStyles} dangerouslySetInnerHTML={{ __html: el.content || "" }} />;
+    }
+
+    if (editingElementId === el.id && (el.type.startsWith("Heading") || el.type === "Paragraph" || el.type === "Button")) {
+        return (
+          <div className="p-2 w-full" onClick={e => e.stopPropagation()}>
+            {(el.type === 'Paragraph') ? (
+                <textarea
+                  value={editText}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => handleInputKeyDown(e, el.id)}
+                  className="p-2 border rounded-md w-full text-foreground bg-input min-h-[80px]"
+                  autoFocus
+                  style={{ fontSize: el.styles?.fontSize, color: el.styles?.color, fontFamily: el.styles?.fontFamily, width: '100%' }}
+                />
+                ) : (
+                <input
+                  type="text"
+                  value={editText}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => handleInputKeyDown(e, el.id)}
+                  className="p-2 border rounded-md w-full text-foreground bg-input"
+                  autoFocus
+                  style={{ fontSize: el.styles?.fontSize, color: el.styles?.color, fontFamily: el.styles?.fontFamily, width: '100%' }}
+                />
+                )}
+            <div className="flex space-x-2 mt-2">
+              <Button size="sm" onClick={(e) => handleSaveEdit(e, el.id)}>Сохранить</Button>
+              <Button size="sm" variant="outline" onClick={handleCancelEdit}>Отмена</Button>
+            </div>
+          </div>
+        );
+    }
+
+    switch (el.type) {
+      case "Heading1": return <h1 style={commonStyles} className="break-words">{el.content}</h1>;
+      case "Heading2": return <h2 style={commonStyles} className="break-words">{el.content}</h2>;
+      case "Heading3": return <h3 style={commonStyles} className="break-words">{el.content}</h3>;
+      case "Paragraph": return <p style={commonStyles} className="break-words">{el.content}</p>;
+      case "Button":
+        return (
+          <Button
+            style={commonStyles}
+            className="canvas-element-button break-words"
+            onClick={(e) => {
+              e.stopPropagation();
+              toast({
+                title: "Кнопка нажата (в редакторе)",
+                description: `Элемент: "${el.content || 'Без названия'}" (ID: ${el.id.substring(0,8)}...)`
+              });
+              onSelectElement(el.id);
+
+              if (activeStyleTimeout.current) {
+                clearTimeout(activeStyleTimeout.current);
+              }
+
+              const stylesBeforeClick = { ...el.styles };
+              const activeBackgroundColor = 'hsl(var(--accent))';
+              const activeStyles = { ...stylesBeforeClick, backgroundColor: activeBackgroundColor };
+
+              onUpdateElementStyle(el.id, activeStyles);
+
+              activeStyleTimeout.current = setTimeout(() => {
+                onUpdateElementStyle(el.id, stylesBeforeClick);
+                activeStyleTimeout.current = null;
+              }, 200);
+            }}
+          >
+            {el.content}
+          </Button>
+        );
+      case "Image":
+        return (
+          <div className="relative overflow-hidden" style={{ width: commonStyles.width, height: commonStyles.height, margin: commonStyles.margin }}>
+            <Image
+                src={el.src || "https://placehold.co/300x200/eee/ccc?text=Нет+URL"}
+                alt={el.alt || "Изображение"}
+                width={parseInt(commonStyles.width?.toString() || "300", 10) || 300}
+                height={parseInt(commonStyles.height?.toString() || "200", 10) || 200}
+                style={{
+                    objectFit: commonStyles.objectFit as CSSProperties['objectFit'],
+                    transform: commonStyles.transform,
+                    display: 'block',
+                  }}
+                className="max-w-full h-auto"
+                {...el.props}
+            />
+          </div>
+        );
+      case "Container":
+          if (el.props?.['data-is-child-block'] && (!el.children || el.children.length === 0)) {
+            return (
+              <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%',
+                  textAlign: 'center',
+                  minHeight: '50px',
+                  color: 'hsl(var(--muted-foreground))',
+                  fontSize: '0.8rem',
+                  fontStyle: 'italic'
+              }}>
+                <p>Внутренний блок</p>
+              </div>
+            );
+          }
+          if ((!el.children || el.children.length === 0) && !el.props?.['data-is-child-block']) {
+              return (
+                <div className="text-xs text-muted-foreground p-4 italic flex items-center justify-center" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', textAlign: 'center' }}>
+                  <p>Пустой контейнер. Выберите его и добавьте элементы в правой панели.</p>
+                </div>
+              );
+          }
+        return null;
+      default: return null;
+    }
+  };
+
+  const findElementIndex = (elementsArray: CanvasElement[], elId: string) => elementsArray.findIndex(el => el.id === elId);
+  const currentIndex = findElementIndex(allPageElements, currentElement.id);
+
+  return (
+    <Card
+      key={currentElement.id}
+      className={cn(
+        "relative group shadow-md hover:shadow-lg transition-all duration-150 ease-in-out",
+        { 'ring-2 ring-primary ring-offset-2 ring-offset-background': selectedElementId === currentElement.id },
+        selectedElementId === currentElement.id ? 'mb-1' : '',
+        (currentElement.type === "Container" && currentElement.props?.['data-layout-type'] && currentElement.children && currentElement.children.length > 0 && selectedElementId === currentElement.id) ? 'bg-transparent' : '',
+        (currentElement.type === "Container" && currentElement.props?.['data-is-child-block']) ? 'flex-1' : ''
+      )}
+      style={{
+        ...(currentElement.styles || {}),
+        position: 'relative',
+        zIndex: selectedElementId === currentElement.id ? 10 : (currentElement.props?.['data-is-child-block'] ? 5 : 2),
+         ...( (currentElement.type === "Container" && currentElement.props?.['data-layout-type'] && currentElement.children && currentElement.children.length > 0) && {padding: '10px'})
+      }}
+      onClick={(e) => handleCardClick(e, currentElement.id)}
+    >
+      {selectedElementId === currentElement.id && (
+        <div
+          className="element-controls absolute left-1/2 -translate-x-1/2 top-[calc(100%+0.25rem)] flex items-center space-x-0.5 bg-popover text-popover-foreground p-1 rounded-md shadow-lg border border-border"
+          style={{ zIndex: 50 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onMoveElement(currentElement.id, "up");}} disabled={currentIndex === 0 || currentElement.type === "Header"} aria-label="Переместить вверх">
+            <ArrowUp className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onMoveElement(currentElement.id, "down");}} disabled={currentIndex === allPageElements.length - 1 || currentElement.type === "Footer"} aria-label="Переместить вниз">
+            <ArrowDown className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onCopyElement(currentElement.id);}} disabled={currentElement.type === "Header" || currentElement.type === "Footer"} aria-label="Копировать элемент">
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          {(currentElement.type.startsWith("Heading") || currentElement.type === "Paragraph" || currentElement.type === "Button" ||
+            (currentElement.type === "Container" && (!currentElement.props?.['data-layout-type'] || !currentElement.children || currentElement.children.length === 0) && !currentElement.props?.['data-is-child-block']))
+            && editingElementId !== currentElement.id && (
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleEditClick(e, currentElement)} aria-label="Редактировать содержимое">
+              <Edit3 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {currentElement.type === "Image" && (
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); onEditImage(currentElement);}} aria-label="Изменить изображение">
+              <ImageUp className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={(e) => { e.stopPropagation(); onRemoveElement(currentElement.id);}} disabled={(currentElement.type === "Header" || currentElement.type === "Footer") && !currentElement.props?.['data-is-child-block']} aria-label="Удалить элемент">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+      {renderInnerContent(currentElement)}
+      {currentElement.type === "Container" && currentElement.children && currentElement.children.length > 0 && (
+        <div
+            className={cn(
+                (currentElement.props?.['data-layout-type'] === 'two-blocks' || currentElement.props?.['data-layout-type'] === 'three-blocks') && "flex flex-row gap-[10px]",
+                "min-h-[inherit]"
+            )}
+            style={ (currentElement.props?.['data-layout-type'] === 'two-blocks' || currentElement.props?.['data-layout-type'] === 'three-blocks') ? {} : {} }
+        >
+          {currentElement.children.map(childElement => (
+            <RenderedCanvasElement
+              key={childElement.id}
+              element={childElement}
+              elements={currentElement.children!} // Pass current element's children as the scope for moving
+              onRemoveElement={onRemoveElement}
+              onUpdateElement={onUpdateElement}
+              selectedElementId={selectedElementId}
+              onSelectElement={onSelectElement}
+              onUpdateElementContent={onUpdateElementContent}
+              onUpdateElementStyle={onUpdateElementStyle}
+              onMoveElement={onMoveElement}
+              onEditImage={onEditImage}
+              onCopyElement={onCopyElement}
+              canvasStyles={{}} // Not relevant for child rendering pass-through
+              showGrid={false}  // Not relevant for child rendering pass-through
+              gridSize={"0"}   // Not relevant for child rendering pass-through
+              parentId={currentElement.id}
+            />
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+
+export default function VisualEditorCanvas({
+  elements,
+  onRemoveElement,
+  onUpdateElement,
+  selectedElementId,
+  onSelectElement,
+  onUpdateElementContent,
+  onUpdateElementStyle,
+  onMoveElement,
+  onEditImage,
+  onCopyElement,
+  canvasStyles,
+  showGrid,
+  gridSize
+}: VisualEditorCanvasProps) {
+
+  const dynamicCanvasDisplayStyles = useMemo(() => {
+    const finalStyles: CSSProperties = {
+        padding: canvasStyles.padding || MODULE_DEFAULT_CANVAS_STYLES.padding,
+        width: canvasStyles.width || MODULE_DEFAULT_CANVAS_STYLES.width,
+        position: 'relative',
+        margin: '0 auto',
+    };
+
+    if (canvasStyles.background && typeof canvasStyles.background === 'string' && canvasStyles.background.startsWith('linear-gradient')) {
+        finalStyles.background = canvasStyles.background;
+        finalStyles.backgroundRepeat = 'no-repeat';
+        finalStyles.backgroundSize = '100% 100%';
+    } else {
+        finalStyles.backgroundColor = canvasStyles.backgroundColor || MODULE_DEFAULT_CANVAS_STYLES.backgroundColor;
+    }
+
+    return finalStyles;
+  }, [canvasStyles]);
+
+  const gridOverlayStyles = useMemo(() => {
+    if (!showGrid) return {};
+    const parsedGridSize = parseInt(gridSize, 10);
+    if (isNaN(parsedGridSize) || parsedGridSize <= 0) return {};
+
+    const gridColor = 'hsla(var(--foreground), 0.25)';
+    return {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundImage: `repeating-linear-gradient(${gridColor} 0 1px, transparent 1px 100%), repeating-linear-gradient(90deg, ${gridColor} 0 1px, transparent 1px 100%)`,
+      backgroundSize: `${parsedGridSize}px ${parsedGridSize}px`,
+      pointerEvents: 'none',
+      zIndex: 1,
+    } as CSSProperties;
+  }, [showGrid, gridSize]);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.target === e.currentTarget || (e.target as HTMLElement).id === 'grid-overlay-actual') {
+          onSelectElement(null);
+      }
+  }, [onSelectElement]);
+
+  return (
+    <div
+      className="editor-area-background w-full h-full overflow-auto"
+      onClick={handleCanvasClick}
+    >
+      <div
+        id="visual-canvas-proper"
+        className="mx-auto shadow-lg"
+        style={dynamicCanvasDisplayStyles}
+        onClick={handleCanvasClick}
+      >
+        {showGrid && <div id="grid-overlay-actual" style={gridOverlayStyles} data-testid="grid-overlay" />}
+
+        {elements.length === 0 && (
+          <div
+            className="flex flex-col items-center justify-center h-full border-2 border-dashed border-border rounded-lg bg-transparent p-8"
+            style={{ minHeight: '300px', position: 'relative', zIndex: 1 }}
+          >
+            <LayoutDashboard className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-semibold text-foreground font-headline">Холст визуального редактора</h2>
+            <p className="text-muted-foreground mt-2 text-center">Добавьте элементы из левой панели, чтобы начать.</p>
+          </div>
+        )}
+
+        {elements.map((element) => (
+          <RenderedCanvasElement
+            key={element.id}
+            element={element}
+            elements={elements} // Pass the top-level elements array for context (e.g., for move logic)
+            onRemoveElement={onRemoveElement}
+            onUpdateElement={onUpdateElement}
+            selectedElementId={selectedElementId}
+            onSelectElement={onSelectElement}
+            onUpdateElementContent={onUpdateElementContent}
+            onUpdateElementStyle={onUpdateElementStyle}
+            onMoveElement={onMoveElement}
+            onEditImage={onEditImage}
+            onCopyElement={onCopyElement}
+            canvasStyles={canvasStyles}
+            showGrid={showGrid}
+            gridSize={gridSize}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
