@@ -9,7 +9,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 <a href="https://github.com/kondrashov-m/pagesmi-course-project/blob/main/Курсовой_Проект_Кондрашов_М_И_241_335.pdf" target="_blank">
-  <img src="https://img.shields.io/badge/📚-Ознакомиться_с_работой-8A2BE2" alt="Ознакомиться с работой" height="30">
+  <img src="https://img.shields.io/badge/📚-Ознакомиться_с_работой-8A2BE2" alt="Ознакомиться с курсовой работой" height="30">
 </a>
 
 ## ✨ Возможности
