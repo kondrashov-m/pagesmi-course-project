@@ -2,9 +2,11 @@
 
 **PagesMi** — это современный WYSIWYG-редактор для создания персональных сайтов без навыков программирования. Проект разработан в рамках курсовой работы по дисциплине "Технологии прикладного программирования".
 
-![React](https://img.shields.io/badge/React-18.2.0-red)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15.2.3-white)
+![React](https://img.shields.io/badge/React-18.3.1-%2361DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-%233178C6)
+![Next.js](https://img.shields.io/badge/Next.js-15.3.5-%23000000)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.1-%2306B6D4)
+![Node.js](https://img.shields.io/badge/Node.js-18.3.1-%23339933)
 ![Status](https://img.shields.io/badge/Status-✅%20Завершен-success)
 
 <a href="https://github.com/kondrashov-m/pagesmi-course-project/blob/main/Курсовой_Проект_Кондрашов_М_И_241_335.pdf" target="_blank">
@@ -20,6 +22,7 @@
 - 👨‍💼 **Админ-панель** - управление пользователями и проектами
 - 📱 **Адаптивный дизайн** - работает на всех устройствах
 - 🔐 **Безопасность** - скрытая активация админ-панели
+- 🤖 **AI-ассистент** - генерация контента через Genkit
 
 ## 🎉 Статус проекта
 
@@ -27,17 +30,20 @@
 
 ## 🛠 Технологический стек
 
-- **Frontend:** React, TypeScript, Next.js, Tailwind CSS
-- **Backend:** Next.js API Routes, Node.js
-- **Архитектура:** Атомарный дизайн, централизованное состояние
-- **Стили:** CSS Modules, Tailwind CSS
-- **Инструменты:** Figma, Git, VS Code
+- **Frontend:** React 18.3.1, TypeScript 5, Next.js 15.3.5, Tailwind CSS 3.4.1
+- **UI Components:** Radix UI, Lucide React, Recharts
+- **Forms & Validation:** React Hook Form 7.54.2, Zod 3.24.2
+- **State Management:** TanStack React Query 5.66.0
+- **AI Integration:** Genkit 1.8.0, @genkit-ai/googleai 1.8.0
+- **Backend:** Next.js API Routes, JSON Web Tokens 9.0.2
+- **Build Tools:** TypeScript 5, PostCSS 8
+- **Development:** Node.js 18.3.1+, npm 11.6.2+
 
 ## 🚀 Быстрый старт
 
 ### Системные требования
-- Node.js 18.x.x
-- npm или yarn
+- Node.js 18.17 или выше
+- npm 11.x или выше
 
 ### Установка и запуск
 
@@ -53,10 +59,3 @@ npm install
 
 # Запуск в режиме разработки
 npm run dev
-```
-##
-<div align="center">
-  <a href="https://kondrashov-m.ru" target="_blank">
-    <img width="148" height="34" alt="logo" src="https://github.com/user-attachments/assets/09168463-1da3-49db-b860-1bb5a8b6ad6a" />
-  </a>
-</div>
