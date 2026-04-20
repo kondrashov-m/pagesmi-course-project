@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { CSSProperties } from "react";
@@ -72,7 +71,7 @@ export default function CanvasPropertyPanel({
         setBackgroundType(determinedNewBackgroundType);
     }
     
-    if (determinedNewBackgroundType === "gradient" && canvasStyles.background) {
+    if (determinedNewBackgroundType === "gradient" && canvasStyles.background && typeof canvasStyles.background === 'string') {
         const gradientMatch = canvasStyles.background.match(/linear-gradient\(([^,]+deg),\s*([^,]+),\s*([^)]+)\)/);
         const newAngle = gradientMatch ? gradientMatch[1].replace('deg', '').trim() : "90";
         const newColor1 = gradientMatch ? gradientMatch[2].trim() : "#FF0000";
@@ -301,5 +300,3 @@ export default function CanvasPropertyPanel({
     </div>
   );
 }
-
-    
