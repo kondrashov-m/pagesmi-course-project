@@ -1,7 +1,7 @@
 
 "use client";
 
-import AiAssistantPanel from "@/components/ai-assistant-panel";
+// import AiAssistantPanel from "@/components/ai-assistant-panel"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Settings2, FileText, Brain } from "lucide-react"; 
