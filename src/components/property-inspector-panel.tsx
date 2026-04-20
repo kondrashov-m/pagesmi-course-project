@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { CanvasElement, ElementType } from "@/types/canvas-element";
@@ -198,8 +197,9 @@ export default function PropertyInspectorPanel({
         setBackgroundType(determinedNewBackgroundType);
     }
     
-    if (determinedNewBackgroundType === "gradient") {
-        const gradientMatch = styles.background?.match(/linear-gradient\(([^,]+deg),\s*([^,]+),\s*([^)]+)\)/);
+    // ИСПРАВЛЕНО: добавлена проверка typeof styles.background === 'string'
+    if (determinedNewBackgroundType === "gradient" && styles.background && typeof styles.background === 'string') {
+        const gradientMatch = styles.background.match(/linear-gradient\(([^,]+deg),\s*([^,]+),\s*([^)]+)\)/);
         const newAngle = gradientMatch ? gradientMatch[1].replace('deg', '').trim() : "90";
         const newColor1 = gradientMatch ? gradientMatch[2].trim() : "#FF0000";
         const newColor2 = gradientMatch ? gradientMatch[3].trim() : "#0000FF";
@@ -846,7 +846,7 @@ export default function PropertyInspectorPanel({
                         <Heading1 className="h-3.5 w-3.5" />Добавить Заголовок
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[calc(theme(space.80)-1.25rem)]"> {/* Match width of trigger approximately */}
+                  <DropdownMenuContent className="w-[calc(theme(space.80)-1.25rem)]">
                     <DropdownMenuItem onClick={() => onAddChildElement('Heading1')} className="text-xs gap-2 h-8">
                         <Heading1 className="h-3.5 w-3.5" /> Заголовок H1
                     </DropdownMenuItem>
@@ -899,5 +899,3 @@ export default function PropertyInspectorPanel({
     </div>
   );
 }
-
-    
