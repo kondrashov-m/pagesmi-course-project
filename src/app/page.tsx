@@ -1,4 +1,3 @@
-
 "use client";
 
 import AppHeader from "@/components/layout/app-header";
@@ -12,7 +11,7 @@ import { PREDEFINED_LOGO_ICONS } from "@/lib/predefined-icons";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/auth-context"; // Added
+import { useAuth } from "@/contexts/auth-context";
 
 const MAX_HISTORY_LENGTH = 50;
 
@@ -250,7 +249,9 @@ const initialSiteData = (): SiteData => {
     };
 };
 
-const findElementByIdRecursive = (elements: CanvasElement[], id: string): CanvasElement | null => {
+// ИСПРАВЛЕНА: функция теперь принимает string | null
+const findElementByIdRecursive = (elements: CanvasElement[], id: string | null): CanvasElement | null => {
+  if (!id) return null;
   for (const element of elements) {
     if (element.id === id) {
       return element;
@@ -337,7 +338,7 @@ const addChildToElementRecursive = (
 };
 
 export default function HomePage() {
-  const [siteData, setSiteDataState] = useState<SiteData>(initialSiteData()); // Initial empty state, will be populated by effect
+  const [siteData, setSiteDataState] = useState<SiteData>(initialSiteData());
   const [historyStack, setHistoryStack] = useState<SiteData[]>([]);
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1);
   const isMobile = useIsMobile();
@@ -352,7 +353,7 @@ export default function HomePage() {
     if (authLoading || isInitialized) return;
 
     let dataToLoad: SiteData | null = null;
-    if (user && typeof window !== 'undefined') { // Ensure localStorage is available
+    if (user && typeof window !== 'undefined') {
       try {
         const storedData = localStorage.getItem('pageForgeProject_' + user.id);
         if (storedData) {
@@ -383,15 +384,13 @@ export default function HomePage() {
       const newActivePageId = finalInitialData.pages[0].id;
       setSiteDataState(prev => {
         const updatedData = { ...prev, activePageId: newActivePageId };
-        // Update history manually here if needed, but for init, direct state update is okay.
-        // We'll let updateSiteDataAndHistory handle future changes to history.
         const newStack = [...historyStack];
         if (newStack.length > 0) newStack[newStack.length-1] = updatedData; else newStack.push(updatedData);
         setHistoryStack(newStack);
         return updatedData;
       });
     }
-  }, [user, authLoading, isInitialized, toast, historyStack]); // Added historyStack to dependencies for the activePageId fix
+  }, [user, authLoading, isInitialized, toast, historyStack]);
 
   const updateSiteDataAndHistory = useCallback((updater: (prevSiteData: SiteData) => SiteData, skipHistory: boolean = false) => {
     setSiteDataState(prevLiveSiteData => {
@@ -675,8 +674,10 @@ export default function HomePage() {
     });
   }, [activePage, canvasElements, updateActivePageData, activeLeftTab]);
 
+  // ИСПРАВЛЕНА: функция handleAddOrUpdateImage
   const handleAddOrUpdateImage = (imageData: { src: string; alt: string; aiHint?: string }) => {
     if (editingImageElementId) {
+      const elementToUpdate = findElementByIdRecursive(canvasElements, editingImageElementId);
       updateActivePageData(page => ({
         ...page,
         elements: mapElementsRecursive(page.elements, editingImageElementId, el =>
@@ -684,7 +685,7 @@ export default function HomePage() {
             ? { ...el, src: imageData.src, alt: imageData.alt, props: { ...el.props, 'data-ai-hint': imageData.aiHint || 'custom image'} }
             : el
         )
-      }), findElementByIdRecursive(canvasElements, editingImageElementId));
+      }), elementToUpdate || undefined);
       setEditingImageElementId(null);
     } else if (pendingParentIdForImage) {
       addElementToCanvasOrContainer("Image", { src: imageData.src, alt: imageData.alt, props: { 'data-ai-hint': imageData.aiHint || 'placeholder image' } }, pendingParentIdForImage);
@@ -715,7 +716,7 @@ export default function HomePage() {
     updateActivePageData(page => ({
       ...page,
       elements: filterElementsRecursive(page.elements, id)
-    }), elementToRemove);
+    }), elementToRemove || undefined);
     if (selectedElementId === id) {
       setSelectedElementId(null);
       setActiveRightTab("pages");
@@ -748,7 +749,7 @@ export default function HomePage() {
       elements: mapElementsRecursive(page.elements, elementId, el =>
         ({ ...el, styles: newCompleteStyles })
       )
-    }), elementToUpdate ? { ...elementToUpdate, styles: newCompleteStyles } : undefined);
+    }), elementToUpdate || undefined);
   };
 
   const updateElementContent = (elementId: string, newContent: string) => {
@@ -758,7 +759,7 @@ export default function HomePage() {
       elements: mapElementsRecursive(page.elements, elementId, el =>
         ({ ...el, content: newContent })
       )
-    }), elementToUpdate ? { ...elementToUpdate, content: newContent } : undefined);
+    }), elementToUpdate || undefined);
   };
 
   const updateElementProp = (elementId: string, propName: string, propValue: any) => {
@@ -794,7 +795,7 @@ export default function HomePage() {
         }
         return { ...el, props: newProps, content: newContent };
       })
-    }), elementToUpdate ? { ...elementToUpdate, props: {...(elementToUpdate?.props || {}), [propName]: propValue} } : undefined);
+    }), elementToUpdate || undefined);
   };
 
  const moveElement = (elementId: string, direction: "up" | "down") => {
@@ -859,7 +860,7 @@ export default function HomePage() {
     updateActivePageData(page => ({
       ...page,
       elements: moveLogic(page.elements, elementId, direction)
-    }), elementToMove);
+    }), elementToMove || undefined);
   };
 
   const copyElement = (elementId: string) => {
@@ -911,7 +912,7 @@ export default function HomePage() {
     }, originalElement);
   };
 
-  const selectedElement = findElementByIdRecursive(canvasElements, selectedElementId || "");
+  const selectedElement = findElementByIdRecursive(canvasElements, selectedElementId);
 
   const addSitePage = () => {
     updateSiteDataAndHistory(prev => {
@@ -1129,5 +1130,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
