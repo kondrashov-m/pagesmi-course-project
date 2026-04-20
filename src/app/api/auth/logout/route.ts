@@ -1,3 +1,19 @@
 
-// Аутентификация отключена. Этот маршрут больше не используется.
-export {};
+import { NextResponse } from 'next/server';
+
+export async function POST() {
+  try {
+    // NextAuth handles session cleanup automatically
+    // Just return a success response
+    return NextResponse.json(
+      { message: 'Logged out successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Logout error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

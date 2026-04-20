@@ -1,144 +1,235 @@
 
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/contexts/auth-context";
-import AppHeader from "@/components/layout/app-header"; 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ArrowLeft, Loader2, Edit, FolderOpen } from "lucide-react";
-import type { SiteData } from "@/types/canvas-element"; // For dummy header data
+import { signOut, useSession, SessionProvider } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
+import { Footer } from '@/components/footer';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { LogOut, Plus, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 
-export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+function DashboardPageContent() {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const [savedProject, setSavedProject] = useState<SiteData | null>(null);
-  const [isLoadingProject, setIsLoadingProject] = useState(true);
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth/login?redirect=/dashboard");
-    } else if (!authLoading && user) {
-      setIsLoadingProject(true);
-      try {
-        if (typeof window !== 'undefined') {
-            const storedData = localStorage.getItem('pageForgeProject_' + user.id);
-            if (storedData) {
-                const project = JSON.parse(storedData) as SiteData;
-                if (project && project.siteName && project.pages) {
-                    setSavedProject(project);
-                } else {
-                    setSavedProject(null);
-                }
-            } else {
-                setSavedProject(null);
-            }
-        }
-      } catch (error) {
-        console.error("Ошибка загрузки проекта для дашборда:", error);
-        setSavedProject(null);
-      } finally {
-        setIsLoadingProject(false);
-      }
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+    } else if (status === 'authenticated') {
+      setLoading(false);
     }
-  }, [user, authLoading, router]);
+  }, [status, router]);
 
-  const handleEditProject = () => {
-    router.push("/"); // page.tsx will handle loading from localStorage
+  const handleLogout = async () => {
+    await signOut({ redirect: true, callbackUrl: '/auth/login' });
   };
 
-  if (authLoading || (!user && !authLoading)) { // Show loader if auth is loading or redirecting
+  const handleCreateProject = () => {
+    alert('Редактор откроется скоро!');
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 }
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-        <Card className="w-full max-w-md shadow-xl text-center">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-center">
-                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                Загрузка...
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Проверяем ваш статус аутентификации и загружаем данные кабинета.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <motion.div
+        className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <motion.div
+          className="text-white text-lg"
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          Загрузка...
+        </motion.div>
+      </motion.div>
     );
   }
 
-  const dummySiteDataForHeader: SiteData = { // For AppHeader, actual save/load is via localStorage
-    pages: savedProject?.pages || [{ id: 'dashboard_placeholder', name: 'Кабинет', path: '/dashboard', elements: [], canvasStyles: {}, gridSettings: {showGrid:false, gridSize:"20"} }],
-    activePageId: savedProject?.activePageId || 'dashboard_placeholder',
-    siteName: savedProject?.siteName || 'PagesMi Кабинет',
-  };
-
-
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <AppHeader
-        onUndo={() => {}} // Not applicable on dashboard
-        onRedo={() => {}} // Not applicable on dashboard
-        canUndo={false}
-        canRedo={false}
-        currentSiteData={dummySiteDataForHeader}
-        onToggleMobileLeftSidebar={() => {}} 
-        onToggleMobileRightSidebar={() => {}}
-        onSaveProject={() => {}} // Save happens in editor
-      />
-      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
-        <Card className="w-full max-w-3xl shadow-xl">
-          <CardHeader className="text-center">
-            <LayoutDashboard className="h-12 w-12 text-primary mx-auto mb-4" />
-            <CardTitle className="text-3xl font-headline">Личный кабинет</CardTitle>
-            <CardDescription>
-              Добро пожаловать, {user?.displayName || user?.email}!
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            {isLoadingProject ? (
-                <div className="flex items-center justify-center p-6">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    <p>Загрузка данных проекта...</p>
-                </div>
-            ) : savedProject ? (
-              <div className="mt-6 p-6 border border-dashed rounded-md bg-muted/50">
-                <h3 className="text-xl font-semibold text-foreground mb-2">Ваш сохраненный проект:</h3>
-                <p className="text-2xl text-primary font-headline mb-4">{savedProject.siteName}</p>
-                <p className="text-sm text-muted-foreground mb-1">Количество страниц: {savedProject.pages.length}</p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  (Последнее сохранение будет загружено в редактор)
-                </p>
-                <Button onClick={handleEditProject} size="lg">
-                  <Edit className="mr-2 h-5 w-5" />
-                  Редактировать проект
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-6 p-6 border border-dashed rounded-md bg-muted/50 text-center">
-                <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Сохраненные проекты не найдены.</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Перейдите в <Link href="/" className="text-primary hover:underline">редактор</Link>, чтобы создать и сохранить свой первый проект.
-                </p>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-center pt-6">
-            <Button variant="outline" asChild>
-              <Link href="/">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Вернуться в редактор
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
+    <motion.div
+      className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.1, 0.2, 0.1]
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        <motion.div
+          className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
+          animate={{
+            scale: [1.2, 1, 1.2],
+            opacity: [0.1, 0.2, 0.1]
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+      </div>
+
+      {/* Language Switcher */}
+      <motion.div
+        className="absolute top-4 right-4 z-20"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
+        <LanguageSwitcher />
+      </motion.div>
+
+      {/* Header */}
+      <motion.header
+        className="relative z-10 border-b border-white/10 bg-white/5 backdrop-blur-xl"
+        variants={itemVariants}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
+          <motion.div
+            className="flex items-center gap-3"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Zap className="w-6 h-6 text-blue-400" />
+            <h1 className="text-2xl font-bold text-white">PagesMi</h1>
+          </motion.div>
+          <div className="flex items-center gap-4">
+            <motion.span
+              className="text-white/60 text-sm"
+              variants={itemVariants}
+            >
+              Добро пожаловать, {session?.user?.email}
+            </motion.span>
+            <motion.div variants={itemVariants}>
+              <Button
+                variant="ghost"
+                onClick={handleLogout}
+                className="text-white/80 hover:text-white hover:bg-white/10"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                {t('nav.logout')}
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </motion.header>
+
+      {/* Main Content */}
+      <main className="flex-1 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <motion.div
+            className="text-center space-y-8"
+            variants={containerVariants}
+          >
+            <motion.h2
+              className="text-4xl md:text-5xl font-bold text-white"
+              variants={itemVariants}
+            >
+              Ваш {t('nav.dashboard')}
+            </motion.h2>
+            <motion.p
+              className="text-xl text-white/60 max-w-2xl mx-auto"
+              variants={itemVariants}
+            >
+              Создавайте и управляйте своими проектами визуального редактора страниц
+            </motion.p>
+
+            {/* Create Project Button */}
+            <motion.div
+              variants={itemVariants}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                size="lg"
+                onClick={handleCreateProject}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Создать новый проект
+              </Button>
+            </motion.div>
+
+            {/* Projects Grid */}
+            <motion.div
+              className="mt-16"
+              variants={containerVariants}
+            >
+              <motion.div
+                className="text-center py-16"
+                variants={itemVariants}
+              >
+                <motion.div
+                  className="w-24 h-24 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center"
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    rotate: [0, 5, -5, 0]
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <Zap className="w-12 h-12 text-white/40" />
+                </motion.div>
+                <h3 className="text-2xl font-semibold text-white mb-2">Нет проектов</h3>
+                <p className="text-white/60">Начните с создания вашего первого проекта</p>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </div>
       </main>
-       <footer className="bg-card border-t p-3 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} PagesMi. Все права защищены.
-      </footer>
-    </div>
+
+      <Footer />
+    </motion.div>
   );
 }
 
-    
+export default function DashboardPage() {
+  return (
+    <SessionProvider>
+      <DashboardPageContent />
+    </SessionProvider>
+  );
+}

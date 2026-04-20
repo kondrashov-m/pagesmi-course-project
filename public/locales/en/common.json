@@ -1,0 +1,43 @@
+{
+  "nav": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "dashboard": "Dashboard"
+  },
+  "landing": {
+    "title": "Create pages without code",
+    "subtitle": "Visual page builder with AI assistance",
+    "features": {
+      "dragdrop": "Drag & drop elements",
+      "templates": "Ready-made templates",
+      "export": "Export to HTML/CSS"
+    },
+    "cta": "Start creating"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account?",
+      "signup": "Sign up"
+    },
+    "register": {
+      "title": "Create your account",
+      "name": "Full name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "login": "Sign in"
+    }
+  },
+  "footer": {
+    "author": "Author: kondrashov-m",
+    "version": "Version: 2.1",
+    "copyright": "© 2026 PagesMi. All rights reserved."
+  }
+}

@@ -1,109 +1,89 @@
 
 import { NextResponse } from 'next/server';
-import { getAllUsers, deleteUserById, findUserById, createUser, updateUserPassword, findUserByEmail } from '@/lib/users';
+import { getAllUsers, createUser, updateUser as updateUserAuth, deleteUser as deleteUserAuth, hashPassword } from '@/lib/auth';
 
 export async function GET() {
   try {
     const users = getAllUsers();
-    return NextResponse.json(users);
+    // Возвращаем без паролей для безопасности
+    const safeUsers = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }));
+    return NextResponse.json(safeUsers);
   } catch (error) {
-    console.error("Error in GET /api/admin/users:", error);
-    return NextResponse.json({ message: "Ошибка сервера при получении пользователей" }, { status: 500 });
+    console.error("Ошибка в GET /api/admin/users:", error);
+    return NextResponse.json({ error: "Ошибка сервера при получении пользователей" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, displayName, password } = body;
+    const { username, email, password } = body;
 
-    if (!email || !password) {
-      return NextResponse.json({ message: "Email и пароль обязательны" }, { status: 400 });
+    // Принимаем либо username (email), либо email
+    const userEmail = email || username;
+
+    if (!userEmail || !password) {
+      return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400 });
     }
     
-    const existingUser = findUserByEmail(email);
-    if (existingUser) {
-        return NextResponse.json({ message: "Пользователь с таким email уже существует" }, { status: 409 });
-    }
-
-    const newUser = createUser({ email, displayName, password });
-    if (newUser) {
-      return NextResponse.json({ success: true, message: "Пользователь успешно создан", user: {id: newUser.id, email: newUser.email, displayName: newUser.displayName} }, { status: 201 });
-    } else {
-      // If createUser returns null, log more details
-      const stillExistingUser = findUserByEmail(email);
-      if (stillExistingUser) {
-        console.error(`Admin API POST: createUser returned null, but user ${email} was found by findUserByEmail. This indicates a duplicate.`);
-        return NextResponse.json({ message: "Пользователь с таким email уже существует." }, { status: 409 });
-      } else {
-        console.error(`Admin API POST: createUser returned null for ${email}, but user was NOT found by findUserByEmail. Unknown reason for createUser failure.`);
-        return NextResponse.json({ message: "Не удалось создать пользователя по неизвестной причине на сервере." }, { status: 500 });
-      }
-    }
+    const newUser = await createUser(userEmail, password, userEmail.split('@')[0]);
+    return NextResponse.json({ 
+      success: true, 
+      message: "Пользователь успешно создан", 
+      user: { id: newUser.id, email: newUser.email }
+    }, { status: 201 });
   } catch (error: any) {
-    console.error("Error in POST /api/admin/users:", error.message, error.stack);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Неверный формат запроса (JSON)" }, { status: 400 });
+    console.error("Ошибка в POST /api/admin/users:", error.message);
+    if (error.message.includes('already exists')) {
+      return NextResponse.json({ error: "Пользователь с такой почтой уже существует" }, { status: 409 });
     }
-    return NextResponse.json({ message: "Ошибка сервера при создании пользователя" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Ошибка при создании пользователя" }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { userId, newPassword } = body;
+    const { id, password } = body;
 
-    if (!userId || !newPassword) {
-      return NextResponse.json({ message: "ID пользователя и новый пароль обязательны" }, { status: 400 });
-    }
-    
-    const userExists = findUserById(userId);
-    if (!userExists) {
-        return NextResponse.json({ message: "Пользователь с таким ID не найден" }, { status: 404 });
+    if (!id || !password) {
+      return NextResponse.json({ error: "ID и пароль обязательны" }, { status: 400 });
     }
 
-    const success = updateUserPassword(userId, newPassword);
-    if (success) {
-      return NextResponse.json({ success: true, message: "Пароль пользователя успешно обновлен" });
-    } else {
-      console.error(`Admin API PATCH: updateUserPassword failed for userId ${userId}.`);
-      return NextResponse.json({ message: "Не удалось обновить пароль пользователя" }, { status: 500 });
-    }
+    const hashedPassword = await hashPassword(password);
+    const updatedUser = await updateUserAuth(id, { password: hashedPassword });
+    return NextResponse.json({ success: true, message: "Пароль успешно изменён", user: updatedUser });
   } catch (error: any) {
-    console.error("Error in PATCH /api/admin/users:", error.message, error.stack);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Неверный формат запроса (JSON)" }, { status: 400 });
+    console.error("Ошибка в PATCH /api/admin/users:", error.message);
+    if (error.message.includes('not found')) {
+      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
-    return NextResponse.json({ message: "Ошибка сервера при обновлении пароля" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Ошибка при обновлении пароля" }, { status: 500 });
   }
 }
-
 
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('id');
+    const id = searchParams.get('id');
 
-    if (!userId) {
-      return NextResponse.json({ message: "ID пользователя не предоставлен" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "ID пользователя не предоставлен" }, { status: 400 });
     }
 
-    const userExists = findUserById(userId);
-    if (!userExists) {
-        return NextResponse.json({ message: "Пользователь с таким ID не найден" }, { status: 404 });
-    }
-
-    const deleted = deleteUserById(userId);
-
-    if (deleted) {
-      return NextResponse.json({ success: true, message: "Пользователь успешно удален" });
-    } else {
-      console.error(`Admin API DELETE: deleteUserById failed for userId ${userId}.`);
-      return NextResponse.json({ success: false, message: "Не удалось удалить пользователя или пользователь не найден" }, { status: 404 });
-    }
+    const result = await deleteUserAuth(id);
+    return NextResponse.json({ success: true, message: "Пользователь успешно удален" });
   } catch (error: any) {
-    console.error("Error in DELETE /api/admin/users:", error.message, error.stack);
-    return NextResponse.json({ message: "Ошибка сервера при удалении пользователя" }, { status: 500 });
+    console.error("Ошибка в DELETE /api/admin/users:", error.message);
+    if (error.message.includes('not found')) {
+      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
+    }
+    return NextResponse.json({ error: error.message || "Ошибка при удалении пользователя" }, { status: 500 });
   }
 }

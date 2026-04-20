@@ -1,20 +1,10 @@
 [
   {
-    "id": "user-1-id-sample",
-    "email": "test1@example.com",
-    "displayName": "Тестовый Пользователь 1",
-    "password": "password123"
-  },
-  {
-    "id": "user-2-id-sample",
-    "email": "another@example.com",
-    "displayName": "Другой Тестер",
-    "password": "password456"
-  },
-  {
-    "id": "user-3-id-sample",
-    "email": "dev@example.dev",
-    "displayName": "Разработчик",
-    "password": "devpassword"
+    "id": "user_1776677770885",
+    "email": "zaza@mail.ru",
+    "displayName": "zaza",
+    "password": "$2a$10$fls1MPNsNKMEx15h8kZfb.rbkrSiZ/mClhHxADrUFaylLoMuTrt7e",
+    "createdAt": "2026-04-20T09:36:10.886Z",
+    "updatedAt": "2026-04-20T09:36:19.639Z"
   }
 ]
