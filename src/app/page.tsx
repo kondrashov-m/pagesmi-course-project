@@ -73,8 +73,7 @@ function generateFooterHtml(pages: SitePage[], siteName: string, activePath: str
 
   const currentYear = new Date().getFullYear();
   const effectiveCopyrightText = copyrightTextProp !== undefined ? copyrightTextProp : `&copy; ${currentYear} ${siteName}. Все права защищены.`;
-  const effectiveCopyrightText = copyrightTextProp !== undefined ? copyrightTextProp : `Разработчик: kondrashov-m`;
-
+  
   return `
     <div class="flex flex-col sm:flex-row justify-between items-center w-full text-xs text-muted-foreground gap-2">
       <p>${effectiveCopyrightText}</p>

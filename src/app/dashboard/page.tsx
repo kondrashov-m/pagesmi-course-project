@@ -135,7 +135,7 @@ export default function DashboardPage() {
         </Card>
       </main>
        <footer className="bg-card border-t p-3 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} PagesMi. Все права защищены.
+        &copy; {new Date().getFullYear()} PagesMi.  защищены.
       </footer>
     </div>
   );
