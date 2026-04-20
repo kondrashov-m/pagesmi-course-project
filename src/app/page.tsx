@@ -17,6 +17,8 @@ const MAX_HISTORY_LENGTH = 50;
 
 
 
+
+
 const MODULE_DEFAULT_CANVAS_STYLES: CSSProperties = {
   backgroundColor: 'hsl(var(--card))',
   padding: '20px',
