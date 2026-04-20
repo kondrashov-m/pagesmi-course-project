@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
             <PenSquare className="h-8 w-8 text-primary" />
-            <span className="text-3xl font-bold text-foreground font-headline">Page Forge</span>
+            <span className="text-3xl font-bold text-foreground font-headline">PagesMi</span>
           </Link>
           <CardTitle className="text-2xl font-headline">Сброс пароля</CardTitle>
           <CardDescription>Введите свой email, и мы (сымитируем) отправку инструкции по сбросу пароля.</CardDescription>

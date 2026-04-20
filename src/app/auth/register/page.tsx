@@ -61,10 +61,10 @@ export default function RegisterPage() {
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
             <PenSquare className="h-8 w-8 text-primary" />
-            <span className="text-3xl font-bold text-foreground font-headline">Page Forge</span>
+            <span className="text-3xl font-bold text-foreground font-headline">PagesMi</span>
           </Link>
           <CardTitle className="text-2xl font-headline">Создать учетную запись</CardTitle>
-          <CardDescription>Присоединяйтесь к Page Forge, чтобы начать создавать красивые страницы.</CardDescription>
+          <CardDescription>Присоединяйтесь к PagesMi, чтобы начать создавать красивые страницы.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
