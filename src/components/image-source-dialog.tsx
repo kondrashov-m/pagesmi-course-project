@@ -56,11 +56,12 @@ export default function ImageSourceDialog({
   const handleFileChange = (files: FileList | null) => {
     if (files && files[0]) {
       const file = files[0];
-      if (file.type !== 'image/jpeg') {
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!ALLOWED_TYPES.includes(file.type)) {
         toast({
           variant: "destructive",
           title: "Неверный тип файла",
-          description: "Пожалуйста, выберите JPG/JPEG файл.",
+          description: "Пожалуйста, выберите JPG, PNG, WebP или GIF файл.",
         });
         setSelectedFile(null);
         setPreviewSrc(initialSrc || "https://placehold.co/200x200.png?text=Preview");
@@ -172,7 +173,7 @@ export default function ImageSourceDialog({
           <DialogHeader>
             <DialogTitle>{initialSrc && !selectedFile ? "Изменить изображение" : "Добавить/Загрузить изображение"}</DialogTitle>
             <DialogDescription>
-              Загрузите JPG-файл или введите URL изображения. Заполните альтернативный текст и подсказку для ИИ.
+              Загрузите изображение (JPG, PNG, WebP, GIF) или введите URL. Заполните альтернативный текст и подсказку для ИИ.
             </DialogDescription>
           </DialogHeader>
           
@@ -195,15 +196,15 @@ export default function ImageSourceDialog({
                 {selectedFile ? `Файл: ${selectedFile.name}` : "Перетащите JPG файл сюда или нажмите для выбора"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {selectedFile ? `Тип: ${selectedFile.type}, Размер: ${(selectedFile.size / 1024).toFixed(1)} KB` : "Только JPG/JPEG файлы"}
+                {selectedFile ? `Тип: ${selectedFile.type}, Размер: ${(selectedFile.size / 1024).toFixed(1)} KB` : "JPG, PNG, WebP, GIF"}
               </p>
               <Input
                 id="fileUpload"
                 type="file"
                 ref={fileInputRef}
                 onChange={(e) => handleFileChange(e.target.files)}
-                className="sr-only" 
-                accept="image/jpeg"
+                className="sr-only"
+                accept="image/jpeg,image/png,image/webp,image/gif"
               />
             </div>
 

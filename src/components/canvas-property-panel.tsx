@@ -1,11 +1,9 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import type { SitePage } from "@/types/canvas-element";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -37,10 +35,10 @@ interface CanvasPropertyPanelProps {
   canvasStyles: CSSProperties;
   onUpdateCanvasStyles: (newStyles: Partial<CSSProperties>) => void;
   gridSettings?: SitePage['gridSettings'];
-  onUpdateGridSettings: (show: boolean, size?: string) => void;
+  onUpdateGridSettings: (show: boolean, size?: string, type?: string, columns?: string, columnGutter?: string) => void;
 }
 
-const INTERNAL_DEFAULT_GRID_SETTINGS = { showGrid: false, gridSize: "20" }; 
+const INTERNAL_DEFAULT_GRID_SETTINGS: SitePage['gridSettings'] = { showGrid: false, gridSize: "20", gridType: 'dots', columns: '12', columnGutter: '16' };
 
 export default function CanvasPropertyPanel({
   canvasStyles,
@@ -49,7 +47,7 @@ export default function CanvasPropertyPanel({
   onUpdateGridSettings,
 }: CanvasPropertyPanelProps) {
 
-  const gridSettings = gridSettingsProp || INTERNAL_DEFAULT_GRID_SETTINGS;
+  const gridSettings: SitePage['gridSettings'] = gridSettingsProp || INTERNAL_DEFAULT_GRID_SETTINGS;
 
   type BackgroundType = "solid" | "gradient";
   const [backgroundType, setBackgroundType] = useState<BackgroundType>("solid");
@@ -103,7 +101,8 @@ export default function CanvasPropertyPanel({
         if (localGradientColor1 !== "#FF0000") setLocalGradientColor1("#FF0000");
         if (localGradientColor2 !== "#0000FF") setLocalGradientColor2("#0000FF");
     }
-  }, [canvasStyles.background, canvasStyles.backgroundColor, backgroundType, localCanvasSolidBgColor, localGradientAngle, localGradientColor1, localGradientColor2]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasStyles.background, canvasStyles.backgroundColor]);
 
   const handleBackgroundTypeChangeInternal = (newType: BackgroundType) => {
     setBackgroundType(newType);
@@ -124,20 +123,12 @@ export default function CanvasPropertyPanel({
     }
   };
   
-  const applyGradientChangeToCanvas = useCallback(() => {
-    if (backgroundType === 'gradient') {
-        onUpdateCanvasStyles({ 
-            background: `linear-gradient(${localGradientAngle}deg, ${localGradientColor1}, ${localGradientColor2})`,
-            backgroundColor: undefined 
-        });
-    }
-  }, [localGradientAngle, localGradientColor1, localGradientColor2, backgroundType, onUpdateCanvasStyles]);
-
-  useEffect(() => {
-    if (backgroundType === 'gradient') {
-        applyGradientChangeToCanvas();
-    }
-  }, [localGradientColor1, localGradientColor2, localGradientAngle, backgroundType, applyGradientChangeToCanvas]);
+  const applyGradientToCanvas = (color1: string, color2: string, angle: string) => {
+    onUpdateCanvasStyles({
+      background: `linear-gradient(${angle}deg, ${color1}, ${color2})`,
+      backgroundColor: undefined,
+    });
+  };
 
 
   const handleCanvasStyleChange = (property: keyof CSSProperties, value: string) => {
@@ -173,40 +164,16 @@ export default function CanvasPropertyPanel({
 
   return (
     <div className="space-y-3 text-xs p-4"> 
-      <CardHeader className="pb-2 pt-0 px-0"> 
-        <CardTitle className="font-headline text-base">Свойства Холста</CardTitle>
-        <CardDescription>Настройте внешний вид и сетку для текущей страницы.</CardDescription>
-      </CardHeader>
-
-      <Separator />
-      <h4 className="text-xs font-medium pt-1">Размеры Холста</h4>
-      <div className="grid grid-cols-1 gap-2"> 
-        <div>
-          <Label htmlFor="canvasWidth" className="text-xs">Ширина</Label>
-          <Input
-            id="canvasWidth"
-            type="text"
-            value={getCurrentCanvasValue('width', '100%')}
-            onChange={(e) => handleCanvasStyleChange('width', e.target.value)}
-            placeholder="100%"
-            className="mt-1 text-xs h-8"
-          />
-        </div>
-      </div>
-      <div>
-          <Label htmlFor="canvasPadding" className="text-xs">Внутр. отступ</Label>
-          <Input
-            id="canvasPadding"
-            type="text"
-            value={getCurrentCanvasValue('padding', '20')}
-            onChange={(e) => handleCanvasStyleChange('padding', e.target.value)}
-            placeholder="20"
-            className="mt-1 text-xs h-8"
-          />
+      <div className="mb-3">
+        <p className="font-semibold text-sm text-[var(--text-primary)]">Свойства Холста</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Фон, сетка и размеры текущей страницы.</p>
       </div>
 
-      <Separator />
-      <h4 className="text-xs font-medium pt-1">Фон Холста</h4>
+    
+      
+
+      <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+      <p className="section-label mt-2 mb-1">Фон Холста</p>
       <RadioGroup
         value={backgroundType}
         onValueChange={(value) => handleBackgroundTypeChangeInternal(value as BackgroundType)}
@@ -225,13 +192,13 @@ export default function CanvasPropertyPanel({
       {backgroundType === "solid" && (
         <div className="space-y-2">
             <div>
-              <Label htmlFor="canvasSolidBgColor" className="text-xs">Цвет фона</Label>
+              <Label htmlFor="canvasSolidBgColor" className="text-[10px] text-[var(--text-secondary)]">Цвет фона</Label>
               <Input
                 id="canvasSolidBgColor"
                 type="color"
                 value={localCanvasSolidBgColor}
-                onChange={handleSolidBgColorChange} 
-                className="h-8 w-full mt-1 p-0.5"
+                onChange={handleSolidBgColorChange}
+                className="h-8 w-full mt-1 p-0.5 rounded-lg border-[rgba(99,139,255,0.25)]"
               />
             </div>
         </div>
@@ -240,63 +207,119 @@ export default function CanvasPropertyPanel({
       {backgroundType === "gradient" && (
         <div className="space-y-2">
           <div>
-            <Label htmlFor="canvasGradientColor1" className="text-xs">Цвет 1</Label>
+            <Label htmlFor="canvasGradientColor1" className="text-[10px] text-[var(--text-secondary)]">Цвет 1</Label>
             <Input
               id="canvasGradientColor1"
               type="color"
               value={localGradientColor1}
-              onChange={(e) => setLocalGradientColor1(e.target.value)}
+              onChange={(e) => {
+                setLocalGradientColor1(e.target.value);
+                applyGradientToCanvas(e.target.value, localGradientColor2, localGradientAngle);
+              }}
               className="h-8 w-full mt-1 p-0.5"
             />
           </div>
           <div>
-            <Label htmlFor="canvasGradientColor2" className="text-xs">Цвет 2</Label>
+            <Label htmlFor="canvasGradientColor2" className="text-[10px] text-[var(--text-secondary)]">Цвет 2</Label>
             <Input
               id="canvasGradientColor2"
               type="color"
               value={localGradientColor2}
-              onChange={(e) => setLocalGradientColor2(e.target.value)}
+              onChange={(e) => {
+                setLocalGradientColor2(e.target.value);
+                applyGradientToCanvas(localGradientColor1, e.target.value, localGradientAngle);
+              }}
               className="h-8 w-full mt-1 p-0.5"
             />
           </div>
           <div>
-            <Label htmlFor="canvasGradientAngle" className="text-xs">Угол (deg)</Label>
+            <Label htmlFor="canvasGradientAngle" className="text-[10px] text-[var(--text-secondary)]">Угол градиента (deg)</Label>
             <Input
               id="canvasGradientAngle"
               type="number"
               value={localGradientAngle}
-              onChange={(e) => setLocalGradientAngle(e.target.value)}
+              onChange={(e) => {
+                setLocalGradientAngle(e.target.value);
+                applyGradientToCanvas(localGradientColor1, localGradientColor2, e.target.value);
+              }}
               placeholder="90"
-              className="mt-1 text-xs h-8"
+              className="mt-1 text-xs h-8 bg-[rgba(15,22,48,0.6)] border-[rgba(99,139,255,0.25)] text-[var(--text-primary)] focus:border-[rgba(99,139,255,0.5)] focus:ring-0"
             />
           </div>
         </div>
       )}
 
 
-      <Separator />
-      <h4 className="text-xs font-medium pt-1">Сетка Холста</h4>
-       <div className="flex items-center space-x-2">
-          <Switch
-              id="show-grid-switch"
-              checked={gridSettings.showGrid}
-              onCheckedChange={(checked) => onUpdateGridSettings(checked, gridSettings.gridSize)}
-          />
-          <Label htmlFor="show-grid-switch" className="text-xs">Показать сетку</Label>
+      <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+      <p className="section-label mt-2 mb-1">Сетка Холста</p>
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="show-grid-switch"
+          checked={gridSettings.showGrid}
+          onCheckedChange={(checked) => onUpdateGridSettings(checked, gridSettings.gridSize, gridSettings.gridType, gridSettings.columns, gridSettings.columnGutter)}
+        />
+        <Label htmlFor="show-grid-switch" className="text-xs text-[var(--text-secondary)]">Показать сетку</Label>
       </div>
-      <div className="mt-2">
-          <Label htmlFor="grid-size" className="text-xs">Размер ячейки (px)</Label>
-          <Input
-              id="grid-size"
-              type="number"
-              value={gridSettings.gridSize || INTERNAL_DEFAULT_GRID_SETTINGS.gridSize}
-              onChange={(e) => onUpdateGridSettings(gridSettings.showGrid, e.target.value)}
-              className="mt-1 text-xs h-8"
-              placeholder={INTERNAL_DEFAULT_GRID_SETTINGS.gridSize}
-              min="1"
-              disabled={!gridSettings.showGrid}
-          />
-      </div>
+
+      {gridSettings.showGrid && (
+        <div className="space-y-2 mt-2">
+          {/* Grid type tabs */}
+          <div className="flex gap-1">
+            {(['dots', 'lines', 'columns'] as const).map(type => (
+              <button
+                key={type}
+                onClick={() => onUpdateGridSettings(true, gridSettings.gridSize, type, gridSettings.columns, gridSettings.columnGutter)}
+                className={`flex-1 py-1 text-[10px] rounded-lg border transition-all ${
+                  (gridSettings.gridType ?? 'dots') === type
+                    ? 'bg-[rgba(99,139,255,0.2)] border-[rgba(99,139,255,0.5)] text-[#638bff]'
+                    : 'border-[rgba(99,139,255,0.15)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}
+              >
+                {type === 'dots' ? 'Точки' : type === 'lines' ? 'Линии' : 'Колонки'}
+              </button>
+            ))}
+          </div>
+
+          {(gridSettings.gridType ?? 'dots') !== 'columns' && (
+            <div>
+              <Label htmlFor="grid-size" className="text-[10px] text-[var(--text-secondary)]">Размер ячейки (px)</Label>
+              <Input
+                id="grid-size"
+                type="number"
+                value={gridSettings.gridSize || '20'}
+                onChange={(e) => onUpdateGridSettings(true, e.target.value, gridSettings.gridType, gridSettings.columns, gridSettings.columnGutter)}
+                className="mt-1 text-xs h-8 bg-[rgba(15,22,48,0.6)] border-[rgba(99,139,255,0.25)] text-[var(--text-primary)] focus:border-[rgba(99,139,255,0.5)] focus:ring-0"
+                min="4"
+              />
+            </div>
+          )}
+
+          {(gridSettings.gridType ?? 'dots') === 'columns' && (
+            <div className="space-y-2">
+              <div>
+                <Label className="text-[10px] text-[var(--text-secondary)]">Количество колонок</Label>
+                <Input
+                  type="number"
+                  value={gridSettings.columns ?? '12'}
+                  onChange={(e) => onUpdateGridSettings(true, gridSettings.gridSize, 'columns', e.target.value, gridSettings.columnGutter)}
+                  className="mt-1 text-xs h-8 bg-[rgba(15,22,48,0.6)] border-[rgba(99,139,255,0.25)] text-[var(--text-primary)] focus:border-[rgba(99,139,255,0.5)] focus:ring-0"
+                  min="1" max="24"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-[var(--text-secondary)]">Отступ между колонками (px)</Label>
+                <Input
+                  type="number"
+                  value={gridSettings.columnGutter ?? '16'}
+                  onChange={(e) => onUpdateGridSettings(true, gridSettings.gridSize, 'columns', gridSettings.columns, e.target.value)}
+                  className="mt-1 text-xs h-8 bg-[rgba(15,22,48,0.6)] border-[rgba(99,139,255,0.25)] text-[var(--text-primary)] focus:border-[rgba(99,139,255,0.5)] focus:ring-0"
+                  min="0"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

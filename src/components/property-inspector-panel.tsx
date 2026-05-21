@@ -1,16 +1,15 @@
 "use client";
 
 import type { CanvasElement, ElementType } from "@/types/canvas-element";
+import { HEADER_PRESETS, FOOTER_PRESETS } from "@/lib/header-footer-presets";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { CSSProperties } from "react";
-import { useState, useEffect, useCallback } from "react";
-import { AlertTriangle, Settings2, ImageUp as ImageIconProp, Palette, Droplets, List, Type as TypeIcon, Brush, PlusCircle, Heading1, Heading2, Heading3 } from "lucide-react"; 
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { AlertTriangle, ImageUp as ImageIconProp, Palette, Droplets, List, Type as TypeIcon, Brush, PlusCircle, Heading1, Heading2, Heading3, Monitor, Tablet, Smartphone, BookmarkPlus } from "lucide-react"; 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { PREDEFINED_LOGO_ICONS, type PredefinedLogoIconKey } from "@/lib/predefined-icons";
@@ -23,18 +22,55 @@ import {
 
 
 const FONT_FAMILIES = [
-  { label: "Inter (по умолч.)", value: "Inter, sans-serif" },
-  { label: "Arial", value: "Arial, sans-serif" },
-  { label: "Georgia", value: "Georgia, serif" },
-  { label: "Times New Roman", value: "Times New Roman, Times, serif" },
-  { label: "Courier New", value: "Courier New, Courier, monospace" },
-  { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
+  // --- Sans-serif ---
+  { label: "Inter", value: "Inter, sans-serif" },
   { label: "Roboto", value: "Roboto, sans-serif" },
   { label: "Open Sans", value: "Open Sans, sans-serif" },
   { label: "Montserrat", value: "Montserrat, sans-serif" },
   { label: "Lato", value: "Lato, sans-serif" },
   { label: "Poppins", value: "Poppins, sans-serif" },
   { label: "Nunito", value: "Nunito, sans-serif" },
+  { label: "Work Sans", value: "Work Sans, sans-serif" },
+  { label: "DM Sans", value: "DM Sans, sans-serif" },
+  { label: "Space Grotesk", value: "Space Grotesk, sans-serif" },
+  { label: "Manrope", value: "Manrope, sans-serif" },
+  { label: "Figtree", value: "Figtree, sans-serif" },
+  { label: "Plus Jakarta Sans", value: "Plus Jakarta Sans, sans-serif" },
+  { label: "Outfit", value: "Outfit, sans-serif" },
+  { label: "Raleway", value: "Raleway, sans-serif" },
+  { label: "Oswald", value: "Oswald, sans-serif" },
+  { label: "Barlow", value: "Barlow, sans-serif" },
+  { label: "Karla", value: "Karla, sans-serif" },
+  { label: "Mulish", value: "Mulish, sans-serif" },
+  { label: "Ubuntu", value: "Ubuntu, sans-serif" },
+  { label: "Josefin Sans", value: "Josefin Sans, sans-serif" },
+  { label: "Bebas Neue", value: "Bebas Neue, sans-serif" },
+  { label: "Arial", value: "Arial, sans-serif" },
+  { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
+  // --- Serif ---
+  { label: "Playfair Display", value: "Playfair Display, serif" },
+  { label: "Merriweather", value: "Merriweather, serif" },
+  { label: "Lora", value: "Lora, serif" },
+  { label: "Cormorant Garamond", value: "Cormorant Garamond, serif" },
+  { label: "EB Garamond", value: "EB Garamond, serif" },
+  { label: "Libre Baskerville", value: "Libre Baskerville, serif" },
+  { label: "Cinzel", value: "Cinzel, serif" },
+  { label: "PT Serif", value: "PT Serif, serif" },
+  { label: "Georgia", value: "Georgia, serif" },
+  { label: "Times New Roman", value: "Times New Roman, Times, serif" },
+  // --- Display / Декоративные ---
+  { label: "Pacifico", value: "Pacifico, cursive" },
+  { label: "Dancing Script", value: "Dancing Script, cursive" },
+  { label: "Lobster", value: "Lobster, cursive" },
+  { label: "Caveat", value: "Caveat, cursive" },
+  { label: "Comfortaa", value: "Comfortaa, cursive" },
+  { label: "Abril Fatface", value: "Abril Fatface, cursive" },
+  { label: "Righteous", value: "Righteous, cursive" },
+  // --- Моноширинные ---
+  { label: "JetBrains Mono", value: "JetBrains Mono, monospace" },
+  { label: "Fira Code", value: "Fira Code, monospace" },
+  { label: "Source Code Pro", value: "Source Code Pro, monospace" },
+  { label: "Courier New", value: "Courier New, Courier, monospace" },
 ];
 
 const isValidHexColor = (color: string): boolean => /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(color);
@@ -68,6 +104,10 @@ interface PropertyInspectorPanelProps {
   onEditImage?: () => void;
   onAddChildElement: (elementType: ElementType, attributes?: Partial<Pick<CanvasElement, 'props'>>) => void;
   onOpenImageDialogForContainer: () => void;
+  onApplyHeaderStyle?: (styleId: string) => void;
+  onApplyFooterStyle?: (styleId: string) => void;
+  deviceView?: "desktop" | "tablet" | "mobile";
+  onSaveBlock?: (element: import("@/types/canvas-element").CanvasElement, name: string) => void;
 }
 
 export default function PropertyInspectorPanel({
@@ -78,7 +118,20 @@ export default function PropertyInspectorPanel({
   onEditImage,
   onAddChildElement,
   onOpenImageDialogForContainer,
+  onApplyHeaderStyle,
+  onApplyFooterStyle,
+  deviceView = "desktop",
+  onSaveBlock,
 }: PropertyInspectorPanelProps) {
+
+  const effectiveStyles = useMemo((): CSSProperties => {
+    if (!selectedElement) return {};
+    const responsive =
+      deviceView === "tablet" ? selectedElement.responsiveStyles?.tablet :
+      deviceView === "mobile" ? selectedElement.responsiveStyles?.mobile :
+      undefined;
+    return { ...selectedElement.styles, ...responsive };
+  }, [selectedElement, deviceView]);
 
   type BackgroundType = "solid" | "gradient";
   const [backgroundType, setBackgroundType] = useState<BackgroundType>("solid");
@@ -184,7 +237,7 @@ export default function PropertyInspectorPanel({
         return;
     }
 
-    const styles = selectedElement.styles || {};
+    const styles = effectiveStyles || {};
     let determinedNewBackgroundType: BackgroundType = "solid";
 
     if ((selectedElement.type === "Header" || selectedElement.type === "Footer" || selectedElement.type === "Container") && 
@@ -241,22 +294,30 @@ export default function PropertyInspectorPanel({
         if (localGradientColor2 !== "#0000FF") setLocalGradientColor2("#0000FF");
     }
     
-    const currentBorderColor = getCurrentValue(styles, 'borderColorForPicker', '#000000');
+    const borderStyle = styles?.border?.toString();
+    let currentBorderColor = '#000000';
+    if (borderStyle) {
+      const m = borderStyle.match(/#(?:[0-9a-fA-F]{3}){1,2}\b|rgb\([^)]+\)|rgba\([^)]+\)/i);
+      if (m) currentBorderColor = m[0];
+    } else if (styles.borderColor && typeof styles.borderColor === 'string') {
+      currentBorderColor = styles.borderColor;
+    }
     if (localElementBorderColor !== currentBorderColor) setLocalElementBorderColor(currentBorderColor);
 
     if (["Heading1", "Heading2", "Heading3", "Paragraph", "Button"].includes(selectedElement.type)) {
-        const currentTextColor = getCurrentValue(styles, 'color', 'hsl(var(--foreground))');
+        const currentTextColor = (typeof styles.color === 'string' && styles.color) ? styles.color : 'hsl(var(--foreground))';
         if (localElementTextColor !== currentTextColor) setLocalElementTextColor(currentTextColor);
     }
 
     if (selectedElement.type === "Header") {
-      const newHeaderIconColor = selectedElement.props?.headerIconColor || "hsl(var(--primary))";
-      const newHeaderSiteNameColor = selectedElement.props?.headerSiteNameColor || "hsl(var(--foreground))";
+      const newHeaderIconColor = selectedElement.props?.headerIconColor || "#638bff";
+      const newHeaderSiteNameColor = selectedElement.props?.headerSiteNameColor || "#e8eaf6";
       if (localHeaderIconColor !== newHeaderIconColor) setLocalHeaderIconColor(newHeaderIconColor);
       if (localHeaderSiteNameColor !== newHeaderSiteNameColor) setLocalHeaderSiteNameColor(newHeaderSiteNameColor);
     }
 
-  }, [selectedElement, getCurrentValue, backgroundType]);
+  // Only re-init local state when the selected element CHANGES (not on every content edit)
+  }, [selectedElement?.id, deviceView]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const handleBackgroundTypeChange = (newType: BackgroundType) => {
@@ -264,7 +325,7 @@ export default function PropertyInspectorPanel({
     
     setBackgroundType(newType); 
 
-    const baseStyles = getBaseStylesWithoutBackground(selectedElement.styles);
+    const baseStyles = getBaseStylesWithoutBackground(effectiveStyles);
     let newCompleteStyles: CSSProperties = { ...baseStyles };
 
     if (newType === "solid") {
@@ -284,7 +345,7 @@ export default function PropertyInspectorPanel({
     const color = e.target.value;
     setLocalElementSolidBgColor(color);
 
-    const baseStyles = getBaseStylesWithoutBackground(selectedElement.styles);
+    const baseStyles = getBaseStylesWithoutBackground(effectiveStyles);
     let newCompleteStyles: CSSProperties = { ...baseStyles };
     
     if (selectedElement.type === "Header") { 
@@ -300,33 +361,15 @@ export default function PropertyInspectorPanel({
       const newOpacity = opacityValue[0];
       setLocalElementSolidBgOpacity(newOpacity);
       
-      const baseStyles = getBaseStylesWithoutBackground(selectedElement.styles);
+      const baseStyles = getBaseStylesWithoutBackground(effectiveStyles);
       let newCompleteStyles: CSSProperties = { ...baseStyles };
       newCompleteStyles.backgroundColor = hexToRgba(localElementSolidBgColor, newOpacity);
       onUpdateElementStyle(selectedElement.id, newCompleteStyles);
   };
 
- const applyGradientChange = useCallback(() => {
-    if (!selectedElement || backgroundType !== 'gradient' || (selectedElement.type !== "Header" && selectedElement.type !== "Footer" && selectedElement.type !== "Container")) return;
-    
-    const baseStyles = getBaseStylesWithoutBackground(selectedElement.styles);
-    const newGradientStyle = `linear-gradient(${localGradientAngle}deg, ${localGradientColor1}, ${localGradientColor2})`;
-
-    if (selectedElement.styles?.background !== newGradientStyle) {
-      const newCompleteStyles: CSSProperties = { 
-        ...baseStyles,
-        background: newGradientStyle
-      };
-      onUpdateElementStyle(selectedElement.id, newCompleteStyles);
-    }
-  }, [selectedElement, backgroundType, localGradientAngle, localGradientColor1, localGradientColor2, onUpdateElementStyle]);
 
 
-  useEffect(() => {
-    if (backgroundType === 'gradient' && selectedElement && (selectedElement.type === "Header" || selectedElement.type === "Footer" || selectedElement.type === "Container")) {
-        applyGradientChange();
-    }
-  }, [localGradientColor1, localGradientColor2, localGradientAngle, backgroundType, selectedElement, applyGradientChange]);
+
 
 
   const handleStyleChange = (property: keyof CSSProperties, value: string | number) => {
@@ -338,7 +381,7 @@ export default function PropertyInspectorPanel({
     const numericPropsWithoutUnit = ['opacity', 'zIndex', 'fontWeight']; 
     const lengthProps = ['fontSize', 'width', 'height', 'minHeight', 'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'margin', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'borderRadius', 'borderWidth', 'letterSpacing', 'lineHeight'];
     
-    let currentStyles = selectedElement.styles || {};
+    let currentStyles = effectiveStyles || {};
     let newCompleteStyles: CSSProperties = {...currentStyles};
 
 
@@ -365,8 +408,6 @@ export default function PropertyInspectorPanel({
             isDeletingProperty = true;
             processedValue = undefined;
         }
-    } else if (value === undefined || (typeof value === 'string' && value.trim() === "")) {
-        isDeletingProperty = true;
     }
 
 
@@ -384,25 +425,9 @@ export default function PropertyInspectorPanel({
         (newCompleteStyles as any)[property] = processedValue;
     }
     
-    const baseWithoutAnyBackground = getBaseStylesWithoutBackground(newCompleteStyles);
-
-    if (selectedElement.type === "Header" || selectedElement.type === "Footer" || selectedElement.type === "Container") {
-        if (backgroundType === "solid") {
-            if (selectedElement.type === "Header") { 
-                 newCompleteStyles = { ...baseWithoutAnyBackground, backgroundColor: hexToRgba(localElementSolidBgColor, localElementSolidBgOpacity) };
-            } else { 
-                 newCompleteStyles = { ...baseWithoutAnyBackground, backgroundColor: localElementSolidBgColor };
-            }
-        } else { 
-            newCompleteStyles = { ...baseWithoutAnyBackground, background: `linear-gradient(${localGradientAngle}deg, ${localGradientColor1}, ${localGradientColor2})` };
-        }
-    } else if (selectedElement.type !== "Image"){ 
-         newCompleteStyles = { ...baseWithoutAnyBackground, backgroundColor: localElementSolidBgColor }; 
-    } else { 
-        newCompleteStyles = { ...newCompleteStyles };
-    }
-
-
+    // Background is already part of effectiveStyles (spread into currentStyles above)
+    // Don't rebuild background here — that would overwrite it with stale local state.
+    // Background changes go through dedicated handlers (handleBackgroundTypeChange, etc.)
     onUpdateElementStyle(selectedElement.id, newCompleteStyles);
   };
 
@@ -431,38 +456,74 @@ export default function PropertyInspectorPanel({
 
   if (!selectedElement) {
     return (
-      <div className="p-4">
-        <CardHeader className="pb-2 pt-0 px-0">
-          <CardTitle className="font-headline text-base flex items-center">
-            <Settings2 className="h-5 w-5 mr-2 text-muted-foreground" /> Свойства элемента
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-0">
-          <div className="flex flex-col items-center justify-center text-center h-full min-h-48 p-4">
-            <AlertTriangle className="h-12 w-12 text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">
-                Выберите элемент на холсте, чтобы изменить его свойства.
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-                Свойства холста (фон, сетка) настраиваются в левой панели на вкладке "Холст".
-            </p>
-          </div>
-        </CardContent>
+      <div className="p-4 flex flex-col items-center justify-center text-center h-full min-h-48">
+        <AlertTriangle className="h-10 w-10 text-[var(--text-muted)] mb-3" />
+        <p className="text-sm text-[var(--text-secondary)]">
+          Выберите элемент на холсте, чтобы изменить его свойства.
+        </p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">
+          Свойства холста настраиваются в левой панели (вкладка «Холст»).
+        </p>
       </div>
     );
   }
 
+  const [saveBlockName, setSaveBlockName] = useState("");
+  const [showSaveName, setShowSaveName] = useState(false);
+
+  const deviceLabels: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+    desktop: { icon: <Monitor size={11}/>, label: "Десктоп", color: "#638bff" },
+    tablet:  { icon: <Tablet size={11}/>,  label: "Планшет", color: "#f59e0b" },
+    mobile:  { icon: <Smartphone size={11}/>, label: "Мобильный", color: "#10b981" },
+  };
+  const dv = deviceLabels[deviceView] ?? deviceLabels.desktop;
+
   return (
-    <div className="space-y-4 p-4">
-      <CardHeader className="pb-2 pt-0 px-0">
-        <CardTitle className="font-headline text-base">Свойства: <span className="text-primary font-semibold">{selectedElement.type}</span></CardTitle>
-        <CardDescription className="text-xs">ID: {selectedElement.id.substring(0,8)}...</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-2 text-xs px-0">
+    <div className="space-y-0 p-4 text-xs">
+      {/* Device indicator + Save block */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:5, padding:"3px 8px", borderRadius:6, background:"rgba(15,22,48,0.6)", border:`1px solid ${dv.color}40` }}>
+          <span style={{ color: dv.color }}>{dv.icon}</span>
+          <span style={{ color: dv.color, fontSize:10, fontWeight:600 }}>{dv.label}</span>
+          {deviceView !== "desktop" && <span style={{ color:"rgba(232,234,246,0.4)", fontSize:9 }}>• overrides</span>}
+        </div>
+        {onSaveBlock && selectedElement.type !== "Header" && selectedElement.type !== "Footer" && (
+          <button
+            onClick={() => setShowSaveName(v => !v)}
+            title="Сохранить блок"
+            style={{ display:"flex", alignItems:"center", gap:4, padding:"3px 8px", borderRadius:6, background:"rgba(99,139,255,0.1)", border:"1px solid rgba(99,139,255,0.25)", color:"#638bff", fontSize:10, fontWeight:600, cursor:"pointer" }}
+          >
+            <BookmarkPlus size={11}/> Сохранить
+          </button>
+        )}
+      </div>
+      {showSaveName && onSaveBlock && (
+        <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+          <input
+            autoFocus
+            value={saveBlockName}
+            onChange={e => setSaveBlockName(e.target.value)}
+            onKeyDown={e => { if (e.key==="Enter" && saveBlockName.trim()) { onSaveBlock(selectedElement, saveBlockName.trim()); setShowSaveName(false); setSaveBlockName(""); } if (e.key==="Escape") setShowSaveName(false); }}
+            placeholder="Название блока..."
+            style={{ flex:1, background:"rgba(15,22,48,0.7)", border:"1px solid rgba(99,139,255,0.3)", borderRadius:6, color:"var(--text-primary)", fontSize:11, padding:"4px 8px", outline:"none" }}
+          />
+          <button
+            onClick={() => { if (saveBlockName.trim()) { onSaveBlock(selectedElement, saveBlockName.trim()); setShowSaveName(false); setSaveBlockName(""); } }}
+            style={{ padding:"4px 10px", borderRadius:6, background:"#638bff", border:"none", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}
+          >OK</button>
+        </div>
+      )}
+      <div className="mb-2">
+        <p className="font-semibold text-sm text-[var(--text-primary)]">
+          <span className="text-blue-400">{selectedElement.type}</span>
+        </p>
+        <p className="text-[var(--text-muted)] text-[10px] mt-0.5">ID: {selectedElement.id.substring(0,8)}…</p>
+      </div>
+      <div className="space-y-3">
           {(isTextElement || selectedElement.type === "Header" || selectedElement.type === "Footer") && (selectedElement.type !== "Button" || (selectedElement.type === "Button" && selectedElement.content !== undefined)) && (
             <>
-              <Separator />
-              <h4 className="text-xs font-medium pt-1">Содержимое</h4>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-1">Содержимое</p>
               {selectedElement.type === "Header" || selectedElement.type === "Footer" || selectedElement.type === "Paragraph" ? (
                   <Textarea
                       id="elementContent"
@@ -486,10 +547,39 @@ export default function PropertyInspectorPanel({
             </>
           )}
 
+          {selectedElement.type === "Header" && onApplyHeaderStyle && (
+            <>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-2">Стиль шапки</p>
+              <div className="grid grid-cols-2 gap-2">
+                {HEADER_PRESETS.map(preset => (
+                  <button
+                    key={preset.id}
+                    onClick={() => onApplyHeaderStyle(preset.id)}
+                    className="rounded-lg overflow-hidden border transition-all hover:border-[rgba(99,139,255,0.6)]"
+                    style={{
+                      border: `1px solid rgba(99,139,255,${selectedElement.props?.headerStyleId === preset.id ? '0.7' : '0.2'})`,
+                      background: 'rgba(15,22,48,0.4)',
+                    }}
+                    title={preset.name}
+                  >
+                    <div className="w-full overflow-hidden" style={{ height: '40px' }} dangerouslySetInnerHTML={{ __html: preset.previewHtml }} />
+                    <div className="px-2 py-1.5 flex items-center justify-between">
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>{preset.name}</span>
+                      {selectedElement.props?.headerStyleId === preset.id && (
+                        <span style={{ color: '#638bff', fontSize: '10px' }}>✓</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
           {selectedElement.type === "Header" && (
             <>
-                <Separator />
-                <h4 className="text-xs font-medium pt-1">Логотип и Название Сайта (Шапка)</h4>
+                <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+                <p className="section-label mt-2 mb-1">Логотип и Название Сайта (Шапка)</p>
                 <div>
                     <Label htmlFor="headerLogoUrl" className="text-xs">URL Логотипа (приоритет)</Label>
                     <Input
@@ -547,10 +637,39 @@ export default function PropertyInspectorPanel({
             </>
           )}
 
+          {selectedElement.type === "Footer" && onApplyFooterStyle && (
+            <>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-2">Стиль подвала</p>
+              <div className="grid grid-cols-2 gap-2">
+                {FOOTER_PRESETS.map(preset => (
+                  <button
+                    key={preset.id}
+                    onClick={() => onApplyFooterStyle(preset.id)}
+                    className="rounded-lg overflow-hidden border transition-all hover:border-[rgba(99,139,255,0.6)]"
+                    style={{
+                      border: `1px solid rgba(99,139,255,${selectedElement.props?.footerStyleId === preset.id ? '0.7' : '0.2'})`,
+                      background: 'rgba(15,22,48,0.4)',
+                    }}
+                    title={preset.name}
+                  >
+                    <div className="w-full overflow-hidden" style={{ height: '40px' }} dangerouslySetInnerHTML={{ __html: preset.previewHtml }} />
+                    <div className="px-2 py-1.5 flex items-center justify-between">
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>{preset.name}</span>
+                      {selectedElement.props?.footerStyleId === preset.id && (
+                        <span style={{ color: '#638bff', fontSize: '10px' }}>✓</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
           {selectedElement.type === "Footer" && (
             <>
-              <Separator />
-              <h4 className="text-xs font-medium pt-1">Текст копирайта (Подвал)</h4>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-1">Текст копирайта (Подвал)</p>
               <div>
                   <Label htmlFor="footerCopyrightText" className="text-xs">Текст копирайта</Label>
                   <Textarea
@@ -566,29 +685,99 @@ export default function PropertyInspectorPanel({
           )}
 
 
-          <Separator />
-          <h4 className="text-xs font-medium pt-1">Размеры и Отступы</h4>
+          {selectedElement.type === "Button" && (
+            <>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-2">Ссылка кнопки</p>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs" style={{ color: 'var(--text-secondary)' }}>URL</Label>
+                  <Input
+                    type="text"
+                    placeholder="https://example.com или /page"
+                    value={selectedElement.props?.href || ""}
+                    onChange={e => onUpdateElementProp(selectedElement.id, 'href', e.target.value)}
+                    className="mt-1 text-xs h-8"
+                    style={{ background: 'rgba(15,22,48,0.6)', borderColor: 'rgba(99,139,255,0.25)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Открывать</Label>
+                  <div className="flex gap-2 mt-1">
+                    {[{ v: '_self', l: 'В этой вкладке' }, { v: '_blank', l: 'В новой вкладке' }].map(opt => (
+                      <button
+                        key={opt.v}
+                        onClick={() => onUpdateElementProp(selectedElement.id, 'target', opt.v)}
+                        style={{
+                          flex: 1, padding: '5px 8px', borderRadius: 7, fontSize: 11,
+                          border: `1px solid ${(selectedElement.props?.target || '_self') === opt.v ? 'rgba(99,139,255,0.6)' : 'rgba(99,139,255,0.2)'}`,
+                          background: (selectedElement.props?.target || '_self') === opt.v ? 'rgba(99,139,255,0.18)' : 'rgba(15,22,48,0.4)',
+                          color: (selectedElement.props?.target || '_self') === opt.v ? '#638bff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                        }}
+                      >{opt.l}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-2" />
+              <p className="section-label mt-1 mb-2">Hover-анимация</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: '', label: 'Нет' },
+                  { id: 'btn-hover-scale', label: '⬡ Масштаб' },
+                  { id: 'btn-hover-lift', label: '↑ Подъём' },
+                  { id: 'btn-hover-glow', label: '✦ Свечение' },
+                  { id: 'btn-hover-slide', label: '▶ Слайд' },
+                  { id: 'btn-hover-shimmer', label: '✧ Блеск' },
+                  { id: 'btn-hover-border', label: '▭ Рамка' },
+                  { id: 'btn-hover-pulse', label: '○ Пульс' },
+                  { id: 'btn-hover-bounce', label: '◎ Bounce' },
+                ].map(anim => {
+                  const cur = selectedElement.props?.hoverAnimation || '';
+                  const active = cur === anim.id;
+                  return (
+                    <button
+                      key={anim.id}
+                      onClick={() => onUpdateElementProp(selectedElement.id, 'hoverAnimation', anim.id)}
+                      style={{
+                        padding: '6px 4px', borderRadius: 7, fontSize: 10, fontWeight: 500,
+                        border: `1px solid ${active ? 'rgba(99,139,255,0.6)' : 'rgba(99,139,255,0.18)'}`,
+                        background: active ? 'rgba(99,139,255,0.18)' : 'rgba(15,22,48,0.4)',
+                        color: active ? '#638bff' : 'var(--text-secondary)',
+                        cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
+                      }}
+                    >{anim.label}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+          <p className="section-label mt-2 mb-1">Размеры и Отступы</p>
           <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="width" className="text-xs">Ширина</Label>
-                <Input id="width" type="text" value={getCurrentValue(selectedElement.styles, 'width', 'auto')} onChange={(e) => handleStyleChange('width', e.target.value)} placeholder="Авто" className="mt-1 text-xs h-8" />
+                <Input id="width" type="text" value={getCurrentValue(effectiveStyles, 'width', 'auto')} onChange={(e) => handleStyleChange('width', e.target.value)} placeholder="Авто" className="mt-1 text-xs h-8" />
               </div>
               <div>
                 <Label htmlFor="height" className="text-xs">Высота</Label>
-                <Input id="height" type="text" value={getCurrentValue(selectedElement.styles, 'height', 'auto')} onChange={(e) => handleStyleChange('height', e.target.value)} placeholder="Авто" className="mt-1 text-xs h-8" />
+                <Input id="height" type="text" value={getCurrentValue(effectiveStyles, 'height', 'auto')} onChange={(e) => handleStyleChange('height', e.target.value)} placeholder="Авто" className="mt-1 text-xs h-8" />
               </div>
           </div>
           <div>
             <Label htmlFor="padding" className="text-xs">Внутр. отступ</Label>
-            <Input id="padding" type="text" value={getCurrentValue(selectedElement.styles, 'padding', '')} onChange={(e) => handleStyleChange('padding', e.target.value)} placeholder="0" className="mt-1 text-xs h-8" />
+            <Input id="padding" type="text" value={getCurrentValue(effectiveStyles, 'padding', '')} onChange={(e) => handleStyleChange('padding', e.target.value)} placeholder="0" className="mt-1 text-xs h-8" />
           </div>
           <div>
             <Label htmlFor="margin" className="text-xs">Внеш. отступ</Label>
-            <Input id="margin" type="text" value={getCurrentValue(selectedElement.styles, 'margin', '')} onChange={(e) => handleStyleChange('margin', e.target.value)} placeholder="0" className="mt-1 text-xs h-8" />
+            <Input id="margin" type="text" value={getCurrentValue(effectiveStyles, 'margin', '')} onChange={(e) => handleStyleChange('margin', e.target.value)} placeholder="0" className="mt-1 text-xs h-8" />
           </div>
 
-          <Separator />
-          <h4 className="text-xs font-medium pt-1">Оформление (Элемент)</h4>
+          <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+          <p className="section-label mt-2 mb-1">Оформление (Элемент)</p>
 
           {isStylableBackgroundElement && (
             <>
@@ -648,7 +837,7 @@ export default function PropertyInspectorPanel({
                       id="gradientColor1"
                       type="color"
                       value={localGradientColor1}
-                      onChange={(e) => setLocalGradientColor1(e.target.value)}
+                      onChange={(e) => { setLocalGradientColor1(e.target.value); if (selectedElement) { const b = getBaseStylesWithoutBackground(effectiveStyles); onUpdateElementStyle(selectedElement.id, { ...b, background: `linear-gradient(${localGradientAngle}deg, ${e.target.value}, ${localGradientColor2})` }); } }}
                       className="h-8 w-full mt-1 p-0.5"
                     />
                   </div>
@@ -658,7 +847,7 @@ export default function PropertyInspectorPanel({
                       id="gradientColor2"
                       type="color"
                       value={localGradientColor2}
-                      onChange={(e) => setLocalGradientColor2(e.target.value)}
+                      onChange={(e) => { setLocalGradientColor2(e.target.value); if (selectedElement) { const b = getBaseStylesWithoutBackground(effectiveStyles); onUpdateElementStyle(selectedElement.id, { ...b, background: `linear-gradient(${localGradientAngle}deg, ${localGradientColor1}, ${e.target.value})` }); } }}
                       className="h-8 w-full mt-1 p-0.5"
                     />
                   </div>
@@ -668,7 +857,7 @@ export default function PropertyInspectorPanel({
                       id="gradientAngle"
                       type="number"
                       value={localGradientAngle}
-                      onChange={(e) => setLocalGradientAngle(e.target.value)}
+                      onChange={(e) => { setLocalGradientAngle(e.target.value); if (selectedElement) { const b = getBaseStylesWithoutBackground(effectiveStyles); onUpdateElementStyle(selectedElement.id, { ...b, background: `linear-gradient(${e.target.value}deg, ${localGradientColor1}, ${localGradientColor2})` }); } }}
                       placeholder="90"
                       className="mt-1 text-xs h-8"
                     />
@@ -681,7 +870,7 @@ export default function PropertyInspectorPanel({
 
           <div>
             <Label htmlFor="elementBorderRadius" className="text-xs">Скругление углов</Label>
-            <Input id="elementBorderRadius" type="text" value={getCurrentValue(selectedElement.styles, 'borderRadius', '0')} onChange={(e) => handleStyleChange('borderRadius', e.target.value)} placeholder="0" className="mt-1 text-xs h-8" />
+            <Input id="elementBorderRadius" type="text" value={getCurrentValue(effectiveStyles, 'borderRadius', '0')} onChange={(e) => handleStyleChange('borderRadius', e.target.value)} placeholder="0" className="mt-1 text-xs h-8" />
           </div>
           <div>
             <Label htmlFor="elementBorderFull" className="text-xs">Граница</Label>
@@ -689,14 +878,14 @@ export default function PropertyInspectorPanel({
               <Input
                   id="elementBorder"
                   type="text"
-                  value={getCurrentValue(selectedElement.styles, 'border', '')}
+                  value={getCurrentValue(effectiveStyles, 'border', '')}
                   onChange={(e) => {
                       const newBorderValue = e.target.value;
                       const colorMatch = newBorderValue.match(/#(?:[0-9a-fA-F]{3}){1,2}\b|rgba?\([^)]+\)|hsla?\([^)]+\)/i);
                       if (colorMatch && (isValidHexColor(colorMatch[0]) || isRgbOrRgbaColor(colorMatch[0]) || isHslOrHslaColor(colorMatch[0]))) {
                           setLocalElementBorderColor(colorMatch[0]);
                       } else if (newBorderValue.trim() === "") {
-                          setLocalElementBorderColor(selectedElement.styles?.borderColor?.toString() || '#000000');
+                          setLocalElementBorderColor(effectiveStyles?.borderColor?.toString() || '#000000');
                       }
                       handleStyleChange('border', newBorderValue);
                   }}
@@ -710,7 +899,7 @@ export default function PropertyInspectorPanel({
                   onChange={(e) => {
                       const newColor = e.target.value;
                       setLocalElementBorderColor(newColor);
-                      const currentBorder = selectedElement.styles?.border?.toString() || '1px solid';
+                      const currentBorder = effectiveStyles?.border?.toString() || '1px solid';
                       const parts = currentBorder.split(' ');
                       const borderWidth = parts[0] && parts[0].match(/^\d*(\.\d+)?(px|em|rem|%|vw|vh|cm|mm|in|pt|pc|auto|inherit|initial|unset)$/i) ? parts[0] : '1px';
                       const borderStyle = parts[1] && ['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset', 'none', 'hidden'].includes(parts[1].toLowerCase()) ? parts[1] : 'solid';
@@ -724,12 +913,12 @@ export default function PropertyInspectorPanel({
 
           {isTextElement && (
             <>
-              <Separator />
-              <h4 className="text-xs font-medium pt-1">Текст</h4>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-1">Текст</p>
                <div>
                 <Label htmlFor="textAlign" className="text-xs">Выравнивание текста</Label>
                 <Select
-                  value={selectedElement.styles?.textAlign?.toString() || "left"}
+                  value={effectiveStyles?.textAlign?.toString() || "left"}
                   onValueChange={(value) => handleStyleChange('textAlign', value)}
                 >
                   <SelectTrigger id="textAlign" className="mt-1 text-xs h-8">
@@ -758,12 +947,12 @@ export default function PropertyInspectorPanel({
               </div>
               <div>
                 <Label htmlFor="elementFontSize" className="text-xs">Размер шрифта</Label>
-                <Input id="elementFontSize" type="text" value={getCurrentValue(selectedElement.styles, 'fontSize', '')} onChange={(e) => handleStyleChange('fontSize', e.target.value)} placeholder="Напр. 16" className="mt-1 text-xs h-8" />
+                <Input id="elementFontSize" type="text" value={getCurrentValue(effectiveStyles, 'fontSize', '')} onChange={(e) => handleStyleChange('fontSize', e.target.value)} placeholder="Напр. 16" className="mt-1 text-xs h-8" />
               </div>
               <div>
                 <Label htmlFor="elementFontFamily" className="text-xs">Шрифт</Label>
                 <Select
-                  value={selectedElement.styles?.fontFamily?.toString() || FONT_FAMILIES[0].value}
+                  value={effectiveStyles?.fontFamily?.toString() || FONT_FAMILIES[0].value}
                   onValueChange={(value) => handleStyleChange('fontFamily', value)}
                 >
                   <SelectTrigger id="elementFontFamily" className="mt-1 text-xs h-8">
@@ -783,8 +972,8 @@ export default function PropertyInspectorPanel({
 
           {selectedElement.type === "Image" && (
             <>
-              <Separator />
-              <h4 className="text-xs font-medium pt-1">Изображение</h4>
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-1">Изображение</p>
               {onEditImage && (
                   <Button onClick={onEditImage} variant="outline" className="w-full mt-1 mb-2 text-xs h-8">
                       <ImageIconProp className="mr-2 h-3.5 w-3.5" /> Изменить URL/Источник
@@ -811,7 +1000,7 @@ export default function PropertyInspectorPanel({
               </div>
               <div>
                 <Label htmlFor="objectFit" className="text-xs">Заполнение объекта</Label>
-                <Select value={selectedElement.styles?.objectFit?.toString() || "cover"} onValueChange={(value) => handleStyleChange('objectFit', value as any)}>
+                <Select value={effectiveStyles?.objectFit?.toString() || "cover"} onValueChange={(value) => handleStyleChange('objectFit', value as any)}>
                   <SelectTrigger id="objectFit" className="mt-1 text-xs h-8"><SelectValue placeholder="Выберите тип заполнения" /></SelectTrigger>
                   <SelectContent>
                       <SelectItem value="fill" className="text-xs">Fill (Заполнить)</SelectItem>
@@ -824,17 +1013,17 @@ export default function PropertyInspectorPanel({
               </div>
               <div>
                 <Label htmlFor="rotate" className="text-xs">Поворот (градусы)</Label>
-                <Input id="rotate" type="number" value={getCurrentValue(selectedElement.styles, 'rotate', '0')} onChange={(e) => handleStyleChange('rotate', e.target.value)} placeholder="0" className="mt-1 text-xs h-8"/>
+                <Input id="rotate" type="number" value={getCurrentValue(effectiveStyles, 'rotate', '0')} onChange={(e) => handleStyleChange('rotate', e.target.value)} placeholder="0" className="mt-1 text-xs h-8"/>
               </div>
             </>
           )}
           {selectedElement.type === "Container" && (
             <>
-              <Separator />
-              <h4 className="text-xs font-medium pt-1 flex items-center">
-                <PlusCircle className="mr-2 h-4 w-4 text-primary" />
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-1" />
+              <p className="section-label mt-2 mb-1 flex items-center">
+                <PlusCircle className="mr-1.5 h-3 w-3 text-blue-400" />
                 Добавить в контейнер
-              </h4>
+              </p>
               <div className="space-y-2 mt-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -884,18 +1073,71 @@ export default function PropertyInspectorPanel({
                     <ImageIconProp className="h-3.5 w-3.5" />Добавить Изображение
                 </Button>
               </div>
-               {selectedElement.children && selectedElement.children.length > 0 && (
-                <>
-                  <Separator className="my-3"/>
-                  <h5 className="text-xs font-medium">Дочерние элементы ({selectedElement.children.length}):</h5>
-                  <p className="text-xs text-muted-foreground italic">
-                    (Управление дочерними элементами появится здесь в будущем)
-                  </p>
-                </>
+              {/* ─── ANIMATION SECTION ─── */}
+              <div className="h-px bg-[rgba(99,139,255,0.15)] my-2" />
+              <p className="section-label mt-2 mb-2">Анимация при появлении</p>
+              <div className="grid grid-cols-3 gap-1.5 mb-2">
+                {[
+                  { id: '', label: 'Нет' },
+                  { id: 'pmi-fadeIn 0.6s ease both', label: 'Fade' },
+                  { id: 'pmi-fadeInUp 0.6s ease both', label: '↑ Up' },
+                  { id: 'pmi-fadeInDown 0.6s ease both', label: '↓ Down' },
+                  { id: 'pmi-fadeInLeft 0.6s ease both', label: '← Left' },
+                  { id: 'pmi-fadeInRight 0.6s ease both', label: '→ Right' },
+                  { id: 'pmi-zoomIn 0.5s ease both', label: 'Zoom' },
+                  { id: 'pmi-bounceIn 0.8s ease both', label: 'Bounce' },
+                  { id: 'pmi-flipInX 0.6s ease both', label: 'Flip' },
+                  { id: 'pmi-slideInLeft 0.5s ease both', label: 'Slide←' },
+                  { id: 'pmi-pulse 1.5s ease infinite', label: 'Pulse' },
+                  { id: 'pmi-float 3s ease-in-out infinite', label: 'Float' },
+                ].map(anim => {
+                  const current = (effectiveStyles?.animation as string) || '';
+                  const isActive = anim.id === '' ? !current : current.startsWith(anim.id.split(' ')[0]);
+                  return (
+                    <button
+                      key={anim.id}
+                      onClick={() => {
+                        const baseStyles = { ...effectiveStyles };
+                        if (anim.id) { (baseStyles as any).animation = anim.id; }
+                        else { delete (baseStyles as any).animation; }
+                        onUpdateElementStyle(selectedElement.id, baseStyles as CSSProperties);
+                      }}
+                      style={{
+                        padding: '5px 4px',
+                        borderRadius: 6,
+                        fontSize: 10,
+                        fontWeight: 500,
+                        border: `1px solid ${isActive ? 'rgba(99,139,255,0.6)' : 'rgba(99,139,255,0.18)'}`,
+                        background: isActive ? 'rgba(99,139,255,0.18)' : 'rgba(15,22,48,0.4)',
+                        color: isActive ? '#638bff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {anim.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {(effectiveStyles?.animation as string) && (
+                <div>
+                  <Label className="text-xs">Длительность (сек)</Label>
+                  <input
+                    type="range" min="0.2" max="3" step="0.1"
+                    value={parseFloat(((effectiveStyles?.animation as string) || '0.6s').match(/[\d.]+s/)?.[0] || '0.6')}
+                    onChange={e => {
+                      const parts = ((effectiveStyles?.animation as string) || '').split(' ');
+                      if (parts.length >= 2) { parts[1] = `${e.target.value}s`; }
+                      onUpdateElementStyle(selectedElement.id, { ...effectiveStyles, animation: parts.join(' ') } as CSSProperties);
+                    }}
+                    className="w-full mt-1 accent-[#638bff]"
+                  />
+                </div>
               )}
             </>
           )}
-        </CardContent>
+      </div>
     </div>
   );
 }

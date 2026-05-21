@@ -4,6 +4,8 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
+  min-width: 900px;
+  overflow-x: auto;
 }
 
 @layer base {
@@ -64,3 +66,263 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ═══ LIQUID GLASS DESIGN SYSTEM ═══════════════════════════════════ */
+:root {
+  --glass-bg: rgba(10, 14, 30, 0.75);
+  --glass-bg-lighter: rgba(15, 22, 48, 0.65);
+  --glass-blur: blur(24px);
+  --glass-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  --sidebar-l: 272px;
+  --sidebar-r: 296px;
+  --header-h: 56px;
+  --accent-blue: #3B82F6;
+  --accent-purple: #8B5CF6;
+  --accent-teal: #2DD4BF;
+  --text-primary: #E2E8F0;
+  --text-secondary: #94A3B8;
+  --text-muted: #475569;
+  --canvas-bg: #F8FAFC;
+}
+
+/* Iridescent glass sidebar */
+.glass-sidebar {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+.glass-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(99,139,255,0.5) 0%, rgba(139,92,246,0.4) 40%, rgba(45,212,191,0.35) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glass header */
+.glass-header {
+  background: rgba(8, 12, 25, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(99,139,255,0.2);
+  box-shadow: 0 1px 0 rgba(99,139,255,0.1);
+}
+
+/* Glass pill button */
+.glass-pill {
+  background: rgba(20, 28, 58, 0.7);
+  border: 1px solid rgba(99,139,255,0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+.glass-pill:hover {
+  background: rgba(30, 42, 82, 0.8);
+  border-color: rgba(99,139,255,0.45);
+}
+.glass-pill.active {
+  background: linear-gradient(135deg, rgba(59,130,246,0.85), rgba(99,102,241,0.75));
+  border-color: rgba(99,139,255,0.6);
+  box-shadow: 0 0 16px rgba(59,130,246,0.3);
+}
+
+/* Glass card (for block thumbnails) */
+.glass-card {
+  background: rgba(15, 22, 48, 0.6);
+  border: 1px solid rgba(99,139,255,0.2);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+.glass-card:hover {
+  background: rgba(25, 35, 70, 0.7);
+  border-color: rgba(99,139,255,0.4);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  transform: translateY(-1px);
+}
+
+/* Canvas selection glow */
+.element-selected-glow {
+  outline: 2px solid rgba(59,130,246,0.8);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+}
+
+/* Floating toolbar */
+.float-toolbar {
+  background: rgba(10, 14, 30, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(99,139,255,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+/* Section label */
+.section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Scrollbar styling */
+.glass-scroll::-webkit-scrollbar { width: 4px; }
+.glass-scroll::-webkit-scrollbar-track { background: transparent; }
+.glass-scroll::-webkit-scrollbar-thumb { background: rgba(99,139,255,0.3); border-radius: 2px; }
+
+/* ═══ DRAG HANDLE ════════════════════════════════════════════════════ */
+.pmi-drag-handle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  border-radius: 4px;
+  background: rgba(8,12,24,0.82);
+  border: 1px solid rgba(99,139,255,0.3);
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  touch-action: none;
+  pointer-events: auto;
+}
+.pmi-drag-handle:active { cursor: grabbing; }
+/* Only show handle for the DIRECTLY hovered group, not all descendants */
+.group:hover > .pmi-drag-handle { opacity: 1; }
+
+/* ═══ SIDEBAR COLLAPSE ═══════════════════════════════════════════════ */
+.sidebar-collapsible {
+  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+  overflow: hidden;
+}
+.sidebar-collapsed {
+  width: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 48px;
+  background: rgba(15,22,48,0.85);
+  border: 1px solid rgba(99,139,255,0.25);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition: background 0.2s, border-color 0.2s;
+}
+.sidebar-toggle-btn:hover {
+  background: rgba(30,42,82,0.95);
+  border-color: rgba(99,139,255,0.5);
+}
+.sidebar-toggle-btn-left {
+  right: -18px;
+  border-radius: 0 6px 6px 0;
+  border-left: none;
+}
+.sidebar-toggle-btn-right {
+  left: -18px;
+  border-radius: 6px 0 0 6px;
+  border-right: none;
+}
+
+/* ═══ CANVAS ELEMENT ANIMATIONS (для применения к элементам) ══════════ */
+@keyframes pmi-fadeIn       { from { opacity:0 } to { opacity:1 } }
+@keyframes pmi-fadeInUp     { from { opacity:0; transform:translateY(32px) } to { opacity:1; transform:translateY(0) } }
+@keyframes pmi-fadeInDown   { from { opacity:0; transform:translateY(-32px) } to { opacity:1; transform:translateY(0) } }
+@keyframes pmi-fadeInLeft   { from { opacity:0; transform:translateX(-40px) } to { opacity:1; transform:translateX(0) } }
+@keyframes pmi-fadeInRight  { from { opacity:0; transform:translateX(40px) } to { opacity:1; transform:translateX(0) } }
+@keyframes pmi-zoomIn       { from { opacity:0; transform:scale(0.8) } to { opacity:1; transform:scale(1) } }
+@keyframes pmi-zoomInDown   { from { opacity:0; transform:scale(0.8) translateY(-30px) } to { opacity:1; transform:scale(1) translateY(0) } }
+@keyframes pmi-bounceIn     { 0%{opacity:0;transform:scale(.3)} 50%{opacity:1;transform:scale(1.08)} 70%{transform:scale(.95)} 100%{transform:scale(1)} }
+@keyframes pmi-pulse        { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes pmi-shake        { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+@keyframes pmi-swing        { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(12deg)} 40%{transform:rotate(-8deg)} 60%{transform:rotate(6deg)} 80%{transform:rotate(-4deg)} }
+@keyframes pmi-flipInX      { from{opacity:0;transform:perspective(400px) rotateX(90deg)} to{opacity:1;transform:perspective(400px) rotateX(0)} }
+@keyframes pmi-slideInLeft  { from{transform:translateX(-100%)} to{transform:translateX(0)} }
+@keyframes pmi-slideInRight { from{transform:translateX(100%)} to{transform:translateX(0)} }
+@keyframes pmi-float        { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes pmi-glow         { 0%,100%{box-shadow:0 0 5px rgba(99,139,255,0.3)} 50%{box-shadow:0 0 20px rgba(99,139,255,0.8),0 0 40px rgba(99,139,255,0.4)} }
+
+/* ═══ BUTTON HOVER ANIMATIONS ════════════════════════════════════════ */
+@keyframes pmi-btn-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes pmi-btn-ripple {
+  0%   { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.btn-hover-scale    { transition: transform 0.18s ease, box-shadow 0.18s ease !important; }
+.btn-hover-scale:hover { transform: scale(1.06) !important; box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important; }
+
+.btn-hover-lift     { transition: transform 0.2s ease, box-shadow 0.2s ease !important; }
+.btn-hover-lift:hover { transform: translateY(-4px) !important; box-shadow: 0 10px 28px rgba(0,0,0,0.3) !important; }
+
+.btn-hover-glow     { transition: box-shadow 0.2s ease !important; }
+.btn-hover-glow:hover { box-shadow: 0 0 0 3px rgba(99,139,255,0.4), 0 0 20px rgba(99,139,255,0.35) !important; }
+
+.btn-hover-pulse    { }
+.btn-hover-pulse:hover { animation: pmi-pulse 0.6s ease !important; }
+
+.btn-hover-bounce   { }
+.btn-hover-bounce:hover { animation: pmi-bounceIn 0.5s ease !important; }
+
+.btn-hover-shake    { }
+.btn-hover-shake:hover { animation: pmi-shake 0.4s ease !important; }
+
+.btn-hover-slide    { position: relative; overflow: hidden; }
+.btn-hover-slide::after {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+.btn-hover-slide:hover::after { transform: translateX(0); }
+
+.btn-hover-shimmer  {
+  background-size: 200% auto !important;
+  transition: background-position 0.4s ease !important;
+}
+.btn-hover-shimmer:hover { background-position: right center !important; }
+
+.btn-hover-border   { transition: box-shadow 0.2s ease !important; }
+.btn-hover-border:hover { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5) !important; }
+
+/* ═══ EDITOR UI ANIMATIONS ═══════════════════════════════════════════ */
+.pmi-sidebar-enter   { animation: pmi-fadeInLeft 0.22s ease both; }
+.pmi-element-add     { animation: pmi-zoomIn 0.18s ease both; }
+.pmi-panel-enter     { animation: pmi-fadeInDown 0.2s ease both; }
+
+/* Smooth hover on canvas elements */
+#visual-canvas-proper .group:hover > *:first-child {
+  outline: 1px dashed rgba(99,139,255,0.3);
+  outline-offset: 2px;
+  transition: outline 0.15s ease;
+}
+
+/* Prevent browser text-selection popup on canvas */
+.editor-area-background {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* contentEditable elements keep user-select: none to suppress browser selection toolbar */

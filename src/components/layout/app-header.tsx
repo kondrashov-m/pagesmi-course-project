@@ -2,9 +2,23 @@
 "use client";
 
 import Link from "next/link";
-import { PenSquare, Save, FolderOpen, Download, UserCircle, Menu, LogOut, ShieldCheckIcon, RotateCcw, RotateCw, LayoutDashboard, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import {
+  SquarePen,
+  Save,
+  Download,
+  UserCircle,
+  Menu,
+  LogOut,
+  RotateCcw,
+  RotateCw,
+  LayoutDashboard,
+  Loader2,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Settings,
+  LayoutTemplate,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,9 +39,11 @@ interface AppHeaderProps {
   canUndo: boolean;
   canRedo: boolean;
   currentSiteData: SiteData;
-  onToggleMobileLeftSidebar: () => void;
-  onToggleMobileRightSidebar: () => void;
+  onToggleMobileLeftSidebar?: () => void;
+  onToggleMobileRightSidebar?: () => void;
   onSaveProject: () => void;
+  deviceView?: "desktop" | "tablet" | "mobile";
+  onDeviceViewChange?: (view: "desktop" | "tablet" | "mobile") => void;
 }
 
 export default function AppHeader({
@@ -39,6 +55,8 @@ export default function AppHeader({
   onToggleMobileLeftSidebar,
   onToggleMobileRightSidebar,
   onSaveProject,
+  deviceView = "desktop",
+  onDeviceViewChange,
 }: AppHeaderProps) {
   const isMobile = useIsMobile();
   const { user, logout, loading: authLoading } = useAuth();
@@ -54,17 +72,19 @@ export default function AppHeader({
       return;
     }
 
-    // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
-    if (typeof window !== "undefined") { // Убедимся, что window существует (для SSR/SSG безопасности, хотя тут client component)
-        if (!window.confirm("Данная функция находится в разработке. Результат может быть не очень качественным. Продолжить?")) {
-          toast({
-            title: "Экспорт отменен",
-            description: "Вы отменили экспорт кода.",
-          });
-          return; 
-        }
+    if (typeof window !== "undefined") {
+      if (
+        !window.confirm(
+          "Данная функция находится в разработке. Результат может быть не очень качественным. Продолжить?"
+        )
+      ) {
+        toast({
+          title: "Экспорт отменен",
+          description: "Вы отменили экспорт кода.",
+        });
+        return;
+      }
     }
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
     try {
       await exportSiteToZip(currentSiteData);
@@ -82,108 +102,262 @@ export default function AppHeader({
     }
   };
 
+  const deviceButtons: {
+    view: "desktop" | "tablet" | "mobile";
+    Icon: React.FC<{ className?: string }>;
+    label: string;
+  }[] = [
+    { view: "desktop", Icon: Monitor, label: "Десктоп" },
+    { view: "tablet", Icon: Tablet, label: "Планшет" },
+    { view: "mobile", Icon: Smartphone, label: "Мобильный" },
+  ];
 
-  const UserMenuItems = () => (
-    <>
-      <DropdownMenuLabel>Моя учетная запись {user?.displayName ? `(${user.displayName})` : ''}</DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      {user ? (
-        <>
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Личный кабинет</Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={logout}>
-            <LogOut className="mr-2 h-4 w-4" /> Выход
-          </DropdownMenuItem>
-        </>
-      ) : (
-        <>
-          <DropdownMenuItem asChild>
-            <Link href="/auth/login">Вход</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/auth/register">Регистрация</Link>
-          </DropdownMenuItem>
-        </>
-      )}
-    </>
-  );
+  if (isMobile) {
+    return (
+      <header className="glass-header sticky top-0 z-50 h-14 flex items-center justify-between px-3">
+        {/* Left: mobile hamburger + undo/redo */}
+        <div className="flex items-center gap-1">
+          {onToggleMobileLeftSidebar && (
+            <button
+              onClick={onToggleMobileLeftSidebar}
+              className="glass-pill rounded-xl p-2 text-[var(--text-secondary)]"
+              aria-label="Открыть левую панель"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={onUndo}
+            disabled={!canUndo || authLoading}
+            className="glass-pill rounded-xl p-2 text-[var(--text-secondary)] disabled:opacity-40"
+            aria-label="Отменить"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo || authLoading}
+            className="glass-pill rounded-xl p-2 text-[var(--text-secondary)] disabled:opacity-40"
+            aria-label="Вернуть"
+          >
+            <RotateCw className="h-4 w-4" />
+          </button>
+        </div>
 
-  return (
-    <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
-      <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
-          <PenSquare className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground font-headline">PagesMi</h1>
+        {/* Center: logo */}
+        <Link href="/" className="flex items-center gap-1.5">
+          <SquarePen className="h-5 w-5 text-[var(--text-primary)]" />
+          <span className="text-base font-bold text-[var(--text-primary)]">PagesMi</span>
         </Link>
 
-        {isMobile ? (
-          <div className="flex items-center gap-1">
-             <Button variant="ghost" size="icon" onClick={onUndo} disabled={!canUndo || authLoading} aria-label="Отменить">
-                <RotateCcw className="h-5 w-5" />
-             </Button>
-             <Button variant="ghost" size="icon" onClick={onRedo} disabled={!canRedo || authLoading} aria-label="Вернуть">
-                <RotateCw className="h-5 w-5" />
-             </Button>
-             {user && (
-                <Button variant="ghost" size="icon" onClick={onSaveProject} disabled={authLoading} aria-label="Сохранить проект">
-                    <Save className="h-5 w-5" />
-                </Button>
-             )}
-             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" disabled={authLoading} aria-label="Меню пользователя">
-                  {authLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <UserCircle className="h-6 w-6" />}
-                  <span className="sr-only">Меню пользователя</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <UserMenuItems />
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {/* Right: user + right sidebar */}
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="glass-pill rounded-full p-2 text-[var(--text-secondary)]"
+                disabled={authLoading}
+                aria-label="Меню пользователя"
+              >
+                {authLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserCircle className="h-4 w-4" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-[rgba(10,14,30,0.95)] border-[rgba(99,139,255,0.3)] text-[var(--text-primary)]">
+              <DropdownMenuLabel>
+                {user?.displayName ? user.displayName : "Моя учетная запись"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-[rgba(99,139,255,0.2)]" />
+              {user ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                      <LayoutDashboard className="h-4 w-4" />
+                      Личный кабинет
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <Settings className="h-4 w-4" />
+                      Профиль
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/templates" className="flex items-center gap-2 cursor-pointer">
+                      <LayoutTemplate className="h-4 w-4" />
+                      Шаблоны
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-[rgba(99,139,255,0.2)]" />
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" /> Выход
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/auth/login" className="cursor-pointer">Вход</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/auth/register" className="cursor-pointer">Регистрация</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {onToggleMobileRightSidebar && (
+            <button
+              onClick={onToggleMobileRightSidebar}
+              className="glass-pill rounded-xl p-2 text-[var(--text-secondary)]"
+              aria-label="Открыть правую панель"
+            >
+              <Menu className="h-4 w-4 scale-x-[-1]" />
+            </button>
+          )}
+        </div>
+      </header>
+    );
+  }
 
-            <Button variant="outline" size="icon" onClick={onToggleMobileLeftSidebar} aria-label="Открыть левую панель" disabled={authLoading}>
-              <Menu className="h-6 w-6" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={onToggleMobileRightSidebar} aria-label="Открыть правую панель" disabled={authLoading}>
-              <Menu className="h-6 w-6 transform scale-x-[-1]" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={onUndo} disabled={!canUndo || authLoading}>
-              <RotateCcw className="mr-2 h-4 w-4" /> Отменить
-            </Button>
-            <Button variant="outline" size="sm" onClick={onRedo} disabled={!canRedo || authLoading}>
-              <RotateCw className="mr-2 h-4 w-4" /> Вернуть
-            </Button>
-            <Separator orientation="vertical" className="h-6 mx-1" />
-            <Button variant="outline" size="sm" onClick={onSaveProject} disabled={!user || authLoading}>
-              <Save className="mr-2 h-4 w-4" /> Сохранить проект
-            </Button>
-            <Button variant="outline" size="sm" asChild disabled={authLoading}>
-              <Link href="/dashboard">
-                <FolderOpen className="mr-2 h-4 w-4" /> Загрузить проект
-              </Link>
-            </Button>
-            <Button variant="default" size="sm" onClick={handleExportCode} disabled={authLoading}>
-              <Download className="mr-2 h-4 w-4" /> Экспорт кода
-            </Button>
-            <Separator orientation="vertical" className="h-6" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full" disabled={authLoading} aria-label="Меню пользователя">
-                   {authLoading ? <Loader2 className="h-7 w-7 animate-spin" /> : <UserCircle className="h-7 w-7" />}
-                  <span className="sr-only">Меню пользователя</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <UserMenuItems />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+  return (
+    <header className="glass-header sticky top-0 z-50 h-14 flex items-center justify-between px-4 gap-3">
+      {/* LEFT: undo/redo + logo */}
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={onUndo}
+          disabled={!canUndo || authLoading}
+          className="glass-pill rounded-full p-2 text-[var(--text-secondary)] disabled:opacity-40"
+          title="Отменить (Ctrl+Z)"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onRedo}
+          disabled={!canRedo || authLoading}
+          className="glass-pill rounded-full p-2 text-[var(--text-secondary)] disabled:opacity-40"
+          title="Вернуть (Ctrl+Y)"
+        >
+          <RotateCw className="h-4 w-4" />
+        </button>
+
+        <div className="w-px h-6 bg-[rgba(99,139,255,0.2)] mx-1" />
+
+        <Link href="/" className="flex items-center gap-2">
+          <SquarePen className="h-5 w-5 text-[var(--text-primary)]" />
+          <span className="text-xl font-bold text-[var(--text-primary)] tracking-tight">
+            PagesMi
+          </span>
+        </Link>
+      </div>
+
+      {/* CENTER: device toggle */}
+      <div className="flex items-center gap-1 glass-pill rounded-2xl px-1 py-1">
+        {deviceButtons.map(({ view, Icon, label }) => (
+          <button
+            key={view}
+            onClick={() => onDeviceViewChange?.(view)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+              deviceView === view
+                ? "active glass-pill"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+            title={label}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* RIGHT: user menu + save + export */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* User menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="glass-pill rounded-full p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              disabled={authLoading}
+              aria-label="Меню пользователя"
+            >
+              {authLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <UserCircle className="h-5 w-5" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="bg-[rgba(10,14,30,0.95)] border-[rgba(99,139,255,0.3)] text-[var(--text-primary)]"
+          >
+            <DropdownMenuLabel>
+              {user?.displayName
+                ? `Моя учетная запись (${user.displayName})`
+                : "Моя учетная запись"}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-[rgba(99,139,255,0.2)]" />
+            {user ? (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutDashboard className="h-4 w-4" />
+                    Личный кабинет
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                    <Settings className="h-4 w-4" />
+                    Профиль
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/templates" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutTemplate className="h-4 w-4" />
+                    Шаблоны
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-[rgba(99,139,255,0.2)]" />
+                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" /> Выход
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link href="/auth/login" className="cursor-pointer">Вход</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/auth/register" className="cursor-pointer">Регистрация</Link>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Save button */}
+        <button
+          onClick={onSaveProject}
+          disabled={!user || authLoading}
+          className="glass-pill rounded-xl flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] disabled:opacity-40"
+          title="Сохранить проект"
+        >
+          <Save className="h-3.5 w-3.5" />
+          <span>Сохранить</span>
+        </button>
+
+        {/* Export button */}
+        <button
+          onClick={handleExportCode}
+          disabled={authLoading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-200 shadow-lg shadow-purple-900/30 disabled:opacity-40"
+          title="Экспорт кода"
+        >
+          <Download className="h-3.5 w-3.5" />
+          <span>Экспорт</span>
+        </button>
       </div>
     </header>
   );

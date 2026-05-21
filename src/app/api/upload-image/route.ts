@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Файл пустой (0 байт).' }, { status: 400 });
     }
 
-    if (!file.type.startsWith('image/jp')) { 
-        console.warn('[API Upload-Image] Invalid file type on server:', file.type, '. Client-side validation should have caught this. Allowing processing but logging.');
+    const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!ALLOWED_MIME.includes(file.type)) {
+      return NextResponse.json({ success: false, message: `Неподдерживаемый тип файла: ${file.type}. Разрешены: JPG, PNG, WebP, GIF.` }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();

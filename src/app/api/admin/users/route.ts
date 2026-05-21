@@ -1,109 +1,104 @@
-
-import { NextResponse } from 'next/server';
-import { getAllUsers, deleteUserById, findUserById, createUser, updateUserPassword, findUserByEmail } from '@/lib/users';
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
 
 export async function GET() {
   try {
-    const users = getAllUsers();
-    return NextResponse.json(users);
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    return NextResponse.json(users)
   } catch (error) {
-    console.error("Error in GET /api/admin/users:", error);
-    return NextResponse.json({ message: "Ошибка сервера при получении пользователей" }, { status: 500 });
+    return NextResponse.json({ message: 'Ошибка сервера' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email, displayName, password } = body;
+    const body = await request.json()
+    const { email, password, displayName, role } = body
 
     if (!email || !password) {
-      return NextResponse.json({ message: "Email и пароль обязательны" }, { status: 400 });
-    }
-    
-    const existingUser = findUserByEmail(email);
-    if (existingUser) {
-        return NextResponse.json({ message: "Пользователь с таким email уже существует" }, { status: 409 });
+      return NextResponse.json({ message: 'Email и пароль обязательны' }, { status: 400 })
     }
 
-    const newUser = createUser({ email, displayName, password });
-    if (newUser) {
-      return NextResponse.json({ success: true, message: "Пользователь успешно создан", user: {id: newUser.id, email: newUser.email, displayName: newUser.displayName} }, { status: 201 });
-    } else {
-      // If createUser returns null, log more details
-      const stillExistingUser = findUserByEmail(email);
-      if (stillExistingUser) {
-        console.error(`Admin API POST: createUser returned null, but user ${email} was found by findUserByEmail. This indicates a duplicate.`);
-        return NextResponse.json({ message: "Пользователь с таким email уже существует." }, { status: 409 });
-      } else {
-        console.error(`Admin API POST: createUser returned null for ${email}, but user was NOT found by findUserByEmail. Unknown reason for createUser failure.`);
-        return NextResponse.json({ message: "Не удалось создать пользователя по неизвестной причине на сервере." }, { status: 500 });
-      }
+    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
+    if (existing) {
+      return NextResponse.json({ message: 'Пользователь с таким email уже существует' }, { status: 409 })
     }
-  } catch (error: any) {
-    console.error("Error in POST /api/admin/users:", error.message, error.stack);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Неверный формат запроса (JSON)" }, { status: 400 });
-    }
-    return NextResponse.json({ message: "Ошибка сервера при создании пользователя" }, { status: 500 });
+
+    const hashedPassword = await bcrypt.hash(password, 12)
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        displayName: displayName ?? null,
+        role: role === 'admin' ? 'admin' : 'user',
+      },
+      select: { id: true, email: true, displayName: true, role: true },
+    })
+
+    return NextResponse.json({ success: true, message: 'Пользователь создан', user }, { status: 201 })
+  } catch (error) {
+    console.error('Create user error:', error)
+    return NextResponse.json({ message: 'Ошибка сервера' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const { userId, newPassword } = body;
+    const body = await request.json()
+    const { userId, newPassword, role, email, displayName } = body
 
-    if (!userId || !newPassword) {
-      return NextResponse.json({ message: "ID пользователя и новый пароль обязательны" }, { status: 400 });
-    }
-    
-    const userExists = findUserById(userId);
-    if (!userExists) {
-        return NextResponse.json({ message: "Пользователь с таким ID не найден" }, { status: 404 });
+    if (!userId) {
+      return NextResponse.json({ message: 'ID пользователя обязателен' }, { status: 400 })
     }
 
-    const success = updateUserPassword(userId, newPassword);
-    if (success) {
-      return NextResponse.json({ success: true, message: "Пароль пользователя успешно обновлен" });
-    } else {
-      console.error(`Admin API PATCH: updateUserPassword failed for userId ${userId}.`);
-      return NextResponse.json({ message: "Не удалось обновить пароль пользователя" }, { status: 500 });
+    const updateData: { password?: string; role?: string; email?: string; displayName?: string } = {}
+
+    if (newPassword) updateData.password = await bcrypt.hash(newPassword, 12)
+    if (role) {
+      if (!['user', 'admin'].includes(role))
+        return NextResponse.json({ message: 'Недопустимая роль' }, { status: 400 })
+      updateData.role = role
     }
+    if (email) {
+      const conflict = await prisma.user.findFirst({ where: { email: email.toLowerCase(), NOT: { id: userId } } })
+      if (conflict) return NextResponse.json({ message: 'Email уже занят' }, { status: 409 })
+      updateData.email = email.toLowerCase()
+    }
+    if (displayName !== undefined) updateData.displayName = displayName || null
+
+    if (Object.keys(updateData).length === 0)
+      return NextResponse.json({ message: 'Нечего обновлять' }, { status: 400 })
+
+    await prisma.user.update({ where: { id: userId }, data: updateData })
+
+    return NextResponse.json({ success: true, message: 'Пользователь обновлён' })
   } catch (error: any) {
-    console.error("Error in PATCH /api/admin/users:", error.message, error.stack);
-    if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: "Неверный формат запроса (JSON)" }, { status: 400 });
+    if (error?.code === 'P2025') {
+      return NextResponse.json({ message: 'Пользователь не найден' }, { status: 404 })
     }
-    return NextResponse.json({ message: "Ошибка сервера при обновлении пароля" }, { status: 500 });
+    return NextResponse.json({ message: 'Ошибка сервера' }, { status: 500 })
   }
 }
 
-
 export async function DELETE(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('id');
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
 
-    if (!userId) {
-      return NextResponse.json({ message: "ID пользователя не предоставлен" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ message: 'ID пользователя не предоставлен' }, { status: 400 })
     }
 
-    const userExists = findUserById(userId);
-    if (!userExists) {
-        return NextResponse.json({ message: "Пользователь с таким ID не найден" }, { status: 404 });
-    }
-
-    const deleted = deleteUserById(userId);
-
-    if (deleted) {
-      return NextResponse.json({ success: true, message: "Пользователь успешно удален" });
-    } else {
-      console.error(`Admin API DELETE: deleteUserById failed for userId ${userId}.`);
-      return NextResponse.json({ success: false, message: "Не удалось удалить пользователя или пользователь не найден" }, { status: 404 });
-    }
+    await prisma.user.delete({ where: { id } })
+    return NextResponse.json({ success: true, message: 'Пользователь удалён' })
   } catch (error: any) {
-    console.error("Error in DELETE /api/admin/users:", error.message, error.stack);
-    return NextResponse.json({ message: "Ошибка сервера при удалении пользователя" }, { status: 500 });
+    if (error?.code === 'P2025') {
+      return NextResponse.json({ message: 'Пользователь с таким ID не найден' }, { status: 404 })
+    }
+    return NextResponse.json({ message: 'Ошибка сервера' }, { status: 500 })
   }
 }

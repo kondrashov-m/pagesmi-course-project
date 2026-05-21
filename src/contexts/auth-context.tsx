@@ -1,120 +1,131 @@
+"use client"
 
-"use client";
+import { useRouter } from "next/navigation"
+import type { ReactNode } from "react"
+import { createContext, useContext, useState, useEffect } from "react"
+import { useToast } from "@/hooks/use-toast"
 
-import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
-import { createContext, useContext, useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-// import { auth } from "@/lib/firebase"; // Firebase import removed
-// import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth"; // Firebase imports removed
-
-// Клиентский тип пользователя (без пароля)
 export interface AppUser {
-  id: string;
-  email: string;
-  displayName?: string;
+  id: string
+  email: string
+  displayName?: string
+  role?: string
 }
 
 interface AuthContextType {
-  user: AppUser | null;
-  loading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, displayName: string) => Promise<void>;
-  logout: () => Promise<void>;
+  user: AppUser | null
+  loading: boolean
+  login: (email: string, pass: string) => Promise<void>
+  register: (email: string, pass: string, displayName: string) => Promise<void>
+  logout: () => Promise<void>
+  updateUser: (data: Partial<AppUser>) => void
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(false); // Initially false, true during API calls
-  const router = useRouter();
-  const { toast } = useToast();
+  const [user, setUser] = useState<AppUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const { toast } = useToast()
 
-  // useEffect(() => {
-  //   // Optional: Check for user session from localStorage on initial load
-  //   // const storedUser = localStorage.getItem('appUser');
-  //   // if (storedUser) {
-  //   //   setUser(JSON.parse(storedUser));
-  //   // }
-  //   // setLoading(false);
-  // }, []);
+  useEffect(() => {
+    // Try cached user first for instant UI
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('appUser')
+      if (cached) {
+        try { setUser(JSON.parse(cached)) } catch { localStorage.removeItem('appUser') }
+      }
+    }
+    // Verify session with server
+    fetch('/api/auth/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.user) {
+          setUser(data.user)
+          localStorage.setItem('appUser', JSON.stringify(data.user))
+        } else {
+          setUser(null)
+          localStorage.removeItem('appUser')
+        }
+      })
+      .catch(() => {/* server unreachable, keep cached */})
+      .finally(() => setLoading(false))
+  }, [])
 
   const login = async (email: string, pass: string) => {
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass }),
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Не удалось войти в систему.");
-      }
-
-      const loggedInUser: AppUser = {
-        id: result.user.id,
-        email: result.user.email,
-        displayName: result.user.displayName,
-      };
-      setUser(loggedInUser);
-      // localStorage.setItem('appUser', JSON.stringify(loggedInUser)); // Optional: persist user
-      toast({ title: "Успешный вход", description: "Добро пожаловать!" });
-      router.push("/");
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message || 'Не удалось войти')
+      const loggedInUser: AppUser = result.user
+      setUser(loggedInUser)
+      localStorage.setItem('appUser', JSON.stringify(loggedInUser))
+      toast({ title: 'Добро пожаловать!', description: loggedInUser.displayName || loggedInUser.email })
+      router.push(loggedInUser.role === 'admin' ? '/admin' : '/')
     } catch (error: any) {
-      console.error("Ошибка входа:", error);
-      toast({ variant: "destructive", title: "Ошибка входа", description: error.message || "Не удалось войти. Проверьте данные." });
-      setUser(null);
-      // localStorage.removeItem('appUser'); // Optional: clear persisted user
+      toast({ variant: 'destructive', title: 'Ошибка входа', description: error.message })
+      setUser(null)
+      localStorage.removeItem('appUser')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const register = async (email: string, pass: string, displayName: string) => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/admin/users', { // Using admin endpoint for creation
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass, displayName }),
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Не удалось зарегистрироваться.");
-      }
-      
-      toast({ title: "Регистрация успешна", description: "Теперь вы можете войти." });
-      router.push("/auth/login");
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message || 'Не удалось зарегистрироваться')
+      // Автоматически входим после регистрации
+      const newUser: AppUser = result.user
+      setUser(newUser)
+      localStorage.setItem('appUser', JSON.stringify(newUser))
+      toast({ title: 'Добро пожаловать!', description: 'Аккаунт создан и вход выполнен.' })
+      router.push(newUser.role === 'admin' ? '/admin' : '/')
     } catch (error: any) {
-      console.error("Ошибка регистрации:", error);
-      toast({ variant: "destructive", title: "Ошибка регистрации", description: error.message || "Не удалось зарегистрироваться." });
+      toast({ variant: 'destructive', title: 'Ошибка регистрации', description: error.message })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const logout = async () => {
-    setUser(null);
-    // localStorage.removeItem('appUser'); // Optional: clear persisted user
-    toast({ title: "Выход выполнен", description: "Вы успешно вышли из системы." });
-    router.push("/auth/login");
-  };
+    await fetch('/api/auth/logout', { method: 'POST' })
+    setUser(null)
+    localStorage.removeItem('appUser')
+    toast({ title: 'Выход выполнен' })
+    router.push('/auth/login')
+  }
+
+  const updateUser = (data: Partial<AppUser>) => {
+    setUser(prev => {
+      if (!prev) return prev
+      const updated = { ...prev, ...data }
+      localStorage.setItem('appUser', JSON.stringify(updated))
+      return updated
+    })
+  }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth должен использоваться внутри AuthProvider");
-  }
-  return context;
+  const context = useContext(AuthContext)
+  if (context === undefined) throw new Error('useAuth must be used within AuthProvider')
+  return context
 }
